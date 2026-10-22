@@ -1668,21 +1668,12 @@ function GamePlayer({
             autoBoostEnabled: settings.autoBoostEnabled,
             autoBoostHotkey: settings.autoBoostHotkey,
             hoverboard: settings.hoverboard,
-            extensionCompat: true,
           },
         },
         "*",
       );
       target.postMessage(
         { type: "SURFVT14_FRAME_CAP", fpsCap: settings.fpsCap },
-        "*",
-      );
-      target.postMessage(
-        { type: "VOLT_EXTENSION_COMPAT", enabled: true },
-        "*",
-      );
-      target.postMessage(
-        { type: "SRC_PLUS_PLUS_COMPAT", enabled: true },
         "*",
       );
     };
