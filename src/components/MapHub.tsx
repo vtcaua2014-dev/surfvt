@@ -2524,7 +2524,7 @@ export default function MapHub() {
           <a
             id="community"
             className="discord-banner"
-            href="https://discord.gg/7UQXW4rT4b"
+            href="https://discord.gg/jNVZU6pgrm"
             target="_blank"
             rel="noreferrer"
           >
