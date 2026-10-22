@@ -1,0 +1,8 @@
+# Opcional: use o domínio público canônico para gerar callbacks estáveis.
+# SURFVT14_PUBLIC_ORIGIN=https://seu-dominio.example
+
+GOOGLE_CLIENT_ID=seu-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=seu-client-secret
+
+DISCORD_CLIENT_ID=seu-client-id
+DISCORD_CLIENT_SECRET=seu-client-secret

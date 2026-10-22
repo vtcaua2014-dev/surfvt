@@ -1,0 +1,36 @@
+{
+  "slug": "paris",
+  "outputDir": "public/game-assets/builds/paris",
+  "files": {
+    "dataUrl": {
+      "hash": "1d60bf825dec",
+      "source": "mapas pa botar/paris/Paris_2.data.unityweb",
+      "target": "paris.alt.data.unityweb"
+    },
+    "wasmCodeUrl": {
+      "hash": "b8e2951880bd",
+      "source": "mapas pa botar/paris/Paris_2.wasm.code.unityweb",
+      "target": "paris.alt.wasm.code.unityweb"
+    },
+    "wasmFrameworkUrl": {
+      "hash": "ff97b4ebf12f",
+      "source": "mapas pa botar/paris/Paris_2.wasm.framework.unityweb",
+      "target": "paris.alt.wasm.framework.unityweb"
+    },
+    "asmCodeUrl": {
+      "hash": "9cc18eda9c9a",
+      "source": "mapas pa botar/paris/Paris_2.asm.code.unityweb",
+      "target": "paris.alt.asm.code.unityweb"
+    },
+    "asmMemoryUrl": {
+      "hash": "35d6770975ad",
+      "source": "mapas pa botar/paris/Paris_2.asm.memory.unityweb",
+      "target": "paris.alt.asm.memory.unityweb"
+    },
+    "asmFrameworkUrl": {
+      "hash": "5de37c5fabf2",
+      "source": "mapas pa botar/paris/Paris_2.asm.framework.unityweb",
+      "target": "paris.alt.asm.framework.unityweb"
+    }
+  }
+}
