@@ -22,6 +22,7 @@ import {
   Clock3,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 
 import nightCity from "@/assets/night-city-lobby.jpg";
@@ -894,6 +895,48 @@ const uiCopy: Record<
     loadingTrack: "正在准备赛道",
     localBuild: "本地版本 · SURFVT14",
     selectedMap: "当前地图",
+  },
+};
+
+const p14BackupCopy: Record<
+  Language,
+  { title: string; instructions: string; warning: string; download: string }
+> = {
+  "pt-BR": {
+    title: "SAVE DO SUBWAY CRACKERS · P14 FUNCTIONS",
+    instructions:
+      "Com o jogo aberto, use P14 Functions → Restaurar e selecione o arquivo baixado. Se solicitado, confirme a restauração entre sites.",
+    warning: "Faça um backup do seu progresso atual antes de restaurar.",
+    download: "BAIXAR BACKUP P14",
+  },
+  en: {
+    title: "SUBWAY CRACKERS SAVE · P14 FUNCTIONS",
+    instructions:
+      "With the game open, use P14 Functions → Restore and select the downloaded file. If prompted, confirm the cross-site restore.",
+    warning: "Back up your current progress before restoring.",
+    download: "DOWNLOAD P14 BACKUP",
+  },
+  de: {
+    title: "SUBWAY-CRACKERS-SPIELSTAND · P14 FUNCTIONS",
+    instructions:
+      "Öffne das Spiel, wähle in P14 Functions → Wiederherstellen die heruntergeladene Datei und bestätige bei Bedarf die Wiederherstellung zwischen Websites.",
+    warning:
+      "Sichere deinen aktuellen Spielfortschritt vor der Wiederherstellung.",
+    download: "P14-BACKUP HERUNTERLADEN",
+  },
+  fr: {
+    title: "SAUVEGARDE SUBWAY CRACKERS · P14 FUNCTIONS",
+    instructions:
+      "Jeu ouvert, choisissez P14 Functions → Restaurer puis sélectionnez le fichier téléchargé. Si demandé, confirmez la restauration entre sites.",
+    warning: "Sauvegardez votre progression actuelle avant la restauration.",
+    download: "TÉLÉCHARGER LA SAUVEGARDE P14",
+  },
+  zh: {
+    title: "SUBWAY CRACKERS 存档 · P14 FUNCTIONS",
+    instructions:
+      "打开游戏后，在 P14 Functions 中选择“恢复”并选取下载的文件；如有提示，请确认跨站点恢复。",
+    warning: "恢复前请先备份当前进度。",
+    download: "下载 P14 备份",
   },
 };
 
@@ -2645,6 +2688,31 @@ export default function MapHub() {
                 </span>
                 <Maximize2 className="ml-auto" />
               </Button>
+              {selected.id === "subwaycrackers" && (
+                <div
+                  className="mt-4 rounded-lg border border-border/70 bg-card/40 p-4 text-left"
+                  role="note"
+                >
+                  <p className="ui-font text-xs font-bold text-secondary">
+                    {p14BackupCopy[settings.language].title}
+                  </p>
+                  <p className="body-font mt-2 text-sm text-muted-foreground">
+                    {p14BackupCopy[settings.language].instructions}
+                  </p>
+                  <p className="body-font mt-2 text-xs text-muted-foreground">
+                    {p14BackupCopy[settings.language].warning}
+                  </p>
+                  <Button asChild variant="outline" className="mt-3 w-full">
+                    <a
+                      href="/downloads/subwaycrackers-p14-save.bin"
+                      download="SubwayCrackers-P14-save.bin"
+                    >
+                      <Download aria-hidden="true" />
+                      {p14BackupCopy[settings.language].download}
+                    </a>
+                  </Button>
+                </div>
+              )}
             </div>
           </section>
         </div>
