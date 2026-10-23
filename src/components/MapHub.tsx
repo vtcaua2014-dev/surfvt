@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Search,
 } from "lucide-react";
 
 import nightCity from "@/assets/night-city-lobby.jpg";
@@ -502,6 +503,7 @@ const uiCopy: Record<
     settings: string;
     play: string;
     close: string;
+    clearSearch: string;
     map: string;
     mapsAvailable: string;
     online: string;
@@ -563,14 +565,23 @@ const uiCopy: Record<
     loadingTrack: string;
     localBuild: string;
     selectedMap: string;
+    homeEyebrow: string;
+    homeDescription: string;
+    searchPlaceholder: string;
+    noMapsFound: string;
+    featuredLabel: string;
+    aboutTitle: string;
+    aboutBody: string;
+    communityCta: string;
   }
 > = {
   "pt-BR": {
     settings: "CONFIGURAÇÕES",
     play: "JOGAR",
     close: "FECHAR",
+    clearSearch: "LIMPAR BUSCA",
     map: "SELECIONE O MAPA",
-    mapsAvailable: "mapas disponíveis",
+    mapsAvailable: "opções disponíveis",
     online: "CONTA ONLINE",
     soundcloud: "PLAYER SOUNDCLOUD",
     fps: "CONTADOR DE FPS",
@@ -630,13 +641,24 @@ const uiCopy: Record<
     loadingTrack: "PREPARANDO A PISTA",
     localBuild: "BUILD LOCAL · SURFVT14",
     selectedMap: "Mapa selecionado",
+    homeEyebrow: "HUB DA COMUNIDADE · WEBGL",
+    homeDescription:
+      "Explore os mapas, escolha sua versão e entre na pista — direto no navegador.",
+    searchPlaceholder: "Buscar por mapa ou região…",
+    noMapsFound: "Nenhum mapa encontrado. Tente outro nome ou região.",
+    featuredLabel: "ROTA SELECIONADA",
+    aboutTitle: "Sobre o SurfVT",
+    aboutBody:
+      "O SurfVT reúne 27 opções jogáveis no navegador — mapas e um jogo independente — além de perfis opcionais e configurações salvas neste navegador.",
+    communityCta: "ABRIR DISCORD",
   },
   en: {
     settings: "SETTINGS",
     play: "PLAY",
     close: "CLOSE",
+    clearSearch: "CLEAR SEARCH",
     map: "SELECT MAP",
-    mapsAvailable: "maps available",
+    mapsAvailable: "playable options",
     online: "ONLINE ACCOUNT",
     soundcloud: "SOUNDCLOUD PLAYER",
     fps: "FPS COUNTER",
@@ -697,13 +719,24 @@ const uiCopy: Record<
     loadingTrack: "PREPARING THE TRACK",
     localBuild: "LOCAL BUILD · SURFVT14",
     selectedMap: "Selected map",
+    homeEyebrow: "COMMUNITY HUB · WEBGL",
+    homeDescription:
+      "Explore the maps, choose a build and hit the track—right in your browser.",
+    searchPlaceholder: "Search by map or region…",
+    noMapsFound: "No maps found. Try another name or region.",
+    featuredLabel: "SELECTED ROUTE",
+    aboutTitle: "About SurfVT",
+    aboutBody:
+      "SurfVT brings together 27 browser-playable options—maps and one standalone game—along with optional profiles and settings saved in this browser.",
+    communityCta: "OPEN DISCORD",
   },
   de: {
     settings: "EINSTELLUNGEN",
     play: "SPIELEN",
     close: "SCHLIESSEN",
+    clearSearch: "SUCHE LEEREN",
     map: "KARTE WÄHLEN",
-    mapsAvailable: "Karten verfügbar",
+    mapsAvailable: "Spieloptionen verfügbar",
     online: "ONLINE-KONTO",
     soundcloud: "SOUNDCLOUD-PLAYER",
     fps: "FPS-ZÄHLER",
@@ -763,13 +796,25 @@ const uiCopy: Record<
     loadingTrack: "STRECKE WIRD VORBEREITET",
     localBuild: "LOKALER BUILD · SURFVT14",
     selectedMap: "Ausgewählte Karte",
+    homeEyebrow: "COMMUNITY-HUB · WEBGL",
+    homeDescription:
+      "Entdecke die Karten, wähle einen Build und starte direkt im Browser.",
+    searchPlaceholder: "Karte oder Region suchen…",
+    noMapsFound:
+      "Keine Karte gefunden. Suche nach einem anderen Namen oder Ort.",
+    featuredLabel: "AUSGEWÄHLTE ROUTE",
+    aboutTitle: "Über SurfVT",
+    aboutBody:
+      "SurfVT vereint 27 im Browser spielbare Optionen – Karten und ein eigenständiges Spiel – sowie optionale Profile und lokal gespeicherte Einstellungen.",
+    communityCta: "DISCORD ÖFFNEN",
   },
   fr: {
     settings: "PARAMÈTRES",
     play: "JOUER",
     close: "FERMER",
+    clearSearch: "EFFACER LA RECHERCHE",
     map: "CHOISIR LA CARTE",
-    mapsAvailable: "cartes disponibles",
+    mapsAvailable: "options jouables",
     online: "COMPTE EN LIGNE",
     soundcloud: "LECTEUR SOUNDCLOUD",
     fps: "COMPTEUR FPS",
@@ -829,13 +874,25 @@ const uiCopy: Record<
     loadingTrack: "PRÉPARATION DE LA PISTE",
     localBuild: "VERSION LOCALE · SURFVT14",
     selectedMap: "Carte sélectionnée",
+    homeEyebrow: "HUB COMMUNAUTAIRE · WEBGL",
+    homeDescription:
+      "Explorez les cartes, choisissez une version et partez sur la piste dans votre navigateur.",
+    searchPlaceholder: "Rechercher par carte ou région…",
+    noMapsFound:
+      "Aucune carte trouvée. Essayez un autre nom ou une autre région.",
+    featuredLabel: "ITINÉRAIRE SÉLECTIONNÉ",
+    aboutTitle: "À propos de SurfVT",
+    aboutBody:
+      "SurfVT réunit 27 options jouables dans le navigateur — des cartes et un jeu indépendant — avec des profils facultatifs et des réglages enregistrés dans ce navigateur.",
+    communityCta: "OUVRIR DISCORD",
   },
   zh: {
     settings: "设置",
     play: "开始游戏",
     close: "关闭",
+    clearSearch: "清除搜索",
     map: "选择地图",
-    mapsAvailable: "张可用地图",
+    mapsAvailable: "个可玩选项",
     online: "在线账户",
     soundcloud: "SOUNDCLOUD 播放器",
     fps: "FPS 计数器",
@@ -895,6 +952,15 @@ const uiCopy: Record<
     loadingTrack: "正在准备赛道",
     localBuild: "本地版本 · SURFVT14",
     selectedMap: "当前地图",
+    homeEyebrow: "社区 HUB · WEBGL",
+    homeDescription: "浏览地图、选择版本并直接在浏览器中出发。",
+    searchPlaceholder: "搜索地图或地区…",
+    noMapsFound: "没有找到地图，请尝试其他名称或地区。",
+    featuredLabel: "已选择路线",
+    aboutTitle: "关于 SurfVT",
+    aboutBody:
+      "SurfVT 汇集了 27 个可在浏览器中游玩的选项，包括地图和一款独立游戏，并提供可选档案和保存在此浏览器中的设置。",
+    communityCta: "打开 DISCORD",
   },
 };
 
@@ -1443,26 +1509,76 @@ function GamePlayer({
       } as PointerEventInit;
       // Unity 2019 mobile builds commonly listen to touch events, while the
       // desktop builds listen to mouse/pointer events. Send both families.
-      try { target.dispatchEvent(new PointerEvent("pointerdown", pointerInit)); } catch (_) {}
+      try {
+        target.dispatchEvent(new PointerEvent("pointerdown", pointerInit));
+      } catch (_) {}
       try {
         const TouchCtor = (view as Window & typeof globalThis).Touch;
         const touch = TouchCtor
-          ? new TouchCtor({ identifier: 914, target, clientX, clientY, pageX: clientX, pageY: clientY })
-          : ({ identifier: 914, target, clientX, clientY, pageX: clientX, pageY: clientY } as unknown as Touch);
-        target.dispatchEvent(new TouchEvent("touchstart", {
-          bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch],
-        }));
+          ? new TouchCtor({
+              identifier: 914,
+              target,
+              clientX,
+              clientY,
+              pageX: clientX,
+              pageY: clientY,
+            })
+          : ({
+              identifier: 914,
+              target,
+              clientX,
+              clientY,
+              pageX: clientX,
+              pageY: clientY,
+            } as unknown as Touch);
+        target.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            cancelable: true,
+            touches: [touch],
+            targetTouches: [touch],
+            changedTouches: [touch],
+          }),
+        );
       } catch (_) {}
       target.dispatchEvent(new MouseEvent("mousedown", mouse));
-      try { target.dispatchEvent(new PointerEvent("pointerup", { ...pointerInit, buttons: 0, pressure: 0 })); } catch (_) {}
+      try {
+        target.dispatchEvent(
+          new PointerEvent("pointerup", {
+            ...pointerInit,
+            buttons: 0,
+            pressure: 0,
+          }),
+        );
+      } catch (_) {}
       try {
         const TouchCtor = (view as Window & typeof globalThis).Touch;
         const touch = TouchCtor
-          ? new TouchCtor({ identifier: 914, target, clientX, clientY, pageX: clientX, pageY: clientY })
-          : ({ identifier: 914, target, clientX, clientY, pageX: clientY, pageY: clientY } as unknown as Touch);
-        target.dispatchEvent(new TouchEvent("touchend", {
-          bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch],
-        }));
+          ? new TouchCtor({
+              identifier: 914,
+              target,
+              clientX,
+              clientY,
+              pageX: clientX,
+              pageY: clientY,
+            })
+          : ({
+              identifier: 914,
+              target,
+              clientX,
+              clientY,
+              pageX: clientY,
+              pageY: clientY,
+            } as unknown as Touch);
+        target.dispatchEvent(
+          new TouchEvent("touchend", {
+            bubbles: true,
+            cancelable: true,
+            touches: [],
+            targetTouches: [],
+            changedTouches: [touch],
+          }),
+        );
       } catch (_) {}
       target.dispatchEvent(new MouseEvent("mouseup", { ...mouse, buttons: 0 }));
       target.dispatchEvent(new MouseEvent("click", mouse));
@@ -1630,7 +1746,8 @@ function GamePlayer({
         event.repeat ||
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
-      ) return;
+      )
+        return;
       if (!matchesHotkey(event.key, event.code)) return;
       event.preventDefault();
       triggerAutoBoost();
@@ -1638,7 +1755,8 @@ function GamePlayer({
     const handleGameKey = (event: MessageEvent) => {
       const data = event.data || {};
       if (data.type !== "SURFVT14_GAME_KEY" || data.repeat) return;
-      if (!matchesHotkey(String(data.key || ""), String(data.code || ""))) return;
+      if (!matchesHotkey(String(data.key || ""), String(data.code || "")))
+        return;
       triggerAutoBoost();
     };
     window.addEventListener("keydown", handleAutoBoost, true);
@@ -1861,7 +1979,8 @@ function GamePlayer({
               <TriangleAlert aria-hidden="true" />
             </div>
             <p className="ui-font text-xs text-secondary">
-              {map.toUpperCase()} // {downloadOnly ? "PACOTE ANDROID" : "BUILD LOCAL"}
+              {map.toUpperCase()} //{" "}
+              {downloadOnly ? "PACOTE ANDROID" : "BUILD LOCAL"}
             </p>
             <h2 className="display-font mt-3 text-3xl sm:text-5xl">
               ERRO AO INICIAR
@@ -1957,9 +2076,9 @@ function GamePlayer({
                   const enhancedScript = gameDocument.createElement("script");
                   enhancedScript.src = "/chronometers/enhanced-controls.js";
                   enhancedScript.dataset.surfvt14Enhanced = "true";
-                  (gameDocument.head || gameDocument.documentElement).appendChild(
-                    enhancedScript,
-                  );
+                  (
+                    gameDocument.head || gameDocument.documentElement
+                  ).appendChild(enhancedScript);
                 }
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
@@ -1969,7 +2088,9 @@ function GamePlayer({
                 }, 250);
               }}
               onError={() =>
-                onError("O iframe do mapa não conseguiu carregar os arquivos locais.")
+                onError(
+                  "O iframe do mapa não conseguiu carregar os arquivos locais.",
+                )
               }
             />
           )}
@@ -2107,6 +2228,7 @@ export default function MapHub() {
   const [selectedMap, setSelectedMap] = useState<MapId>(
     () => readStoredProfile().favoriteMap,
   );
+  const [mapSearch, setMapSearch] = useState("");
   const [launchedMap, setLaunchedMap] = useState<MapId>("zurich");
   const [veniceVariant, setVeniceVariant] = useState<VeniceVariant>("normal");
   const [veniceChoiceOpen, setVeniceChoiceOpen] = useState(false);
@@ -2152,6 +2274,10 @@ export default function MapHub() {
   const meta = themeMeta[theme];
   const selectedTitle = selected.name.toUpperCase();
   const copy = uiCopy[settings.language];
+  const normalizedMapSearch = mapSearch.trim().toLowerCase();
+  const filteredMaps = maps.filter((map) =>
+    `${map.name} ${map.region}`.toLowerCase().includes(normalizedMapSearch),
+  );
   const liveTokens =
     profile.provider === "local"
       ? 0
@@ -2267,9 +2393,8 @@ export default function MapHub() {
         frames = 0;
         last = now;
       }
-      const interval = settings.fpsCap === "unlocked"
-        ? 0
-        : 1000 / Number(settings.fpsCap);
+      const interval =
+        settings.fpsCap === "unlocked" ? 0 : 1000 / Number(settings.fpsCap);
       if (interval) {
         timeout = window.setTimeout(() => {
           raf = requestAnimationFrame(tick);
@@ -2420,8 +2545,12 @@ export default function MapHub() {
               : (maps.find((map) => map.id === launchedMap)?.path ??
                 maps[0]!.path)
           }
-          mapDownloadUrl={maps.find((map) => map.id === launchedMap)?.downloadUrl}
-          downloadOnly={maps.find((map) => map.id === launchedMap)?.downloadOnly}
+          mapDownloadUrl={
+            maps.find((map) => map.id === launchedMap)?.downloadUrl
+          }
+          downloadOnly={
+            maps.find((map) => map.id === launchedMap)?.downloadOnly
+          }
           isVisible={isPlaying}
           onClose={handleClose}
           onProgress={(progress) =>
@@ -2445,7 +2574,7 @@ export default function MapHub() {
         />
         <div className="lobby-scrim" />
         <div className="hub-grid pointer-events-none fixed inset-0" />
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-8 sm:py-8">
+        <div className="home-container relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-5 sm:px-8 sm:py-8">
           <header className="lobby-header">
             <div>
               <div className="brand-line">
@@ -2465,6 +2594,7 @@ export default function MapHub() {
               </div>
             </div>
             <nav className="hub-nav" aria-label={copy.community}>
+              <a href="#collection">{copy.collection}</a>
               <a href="#community">{copy.community}</a>
               <a href="#about">{copy.about}</a>
             </nav>
@@ -2521,49 +2651,59 @@ export default function MapHub() {
               </div>
             )}
           </header>
-          <a
-            id="community"
-            className="discord-banner"
-            href="https://discord.gg/jNVZU6pgrm"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <img
-              className="discord-server-icon"
-              src="/discord-server-icon.png"
-              alt="Discord"
-            />{" "}
-            <span>
-              <strong>{copy.communityTitle}</strong>
-              <small>{copy.communitySub}</small>
-            </span>
-            <span className="discord-arrow">↗</span>
-          </a>
+          <section className="site-community" id="community">
+            <a
+              className="discord-banner"
+              href="https://discord.gg/jNVZU6pgrm"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                className="discord-server-icon"
+                src="/discord-server-icon.png"
+                alt="Discord"
+              />{" "}
+              <span>
+                <strong>{copy.communityTitle}</strong>
+                <small>{copy.communitySub}</small>
+                <span className="community-action">
+                  {copy.communityCta} <i aria-hidden="true">↗</i>
+                </span>
+              </span>
+              <span className="discord-arrow">↗</span>
+            </a>
+          </section>
 
           <section
             id="collection"
-            className="grid flex-1 items-center gap-6 py-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(350px,.72fr)]"
+            className="home-layout grid flex-1 items-center gap-6 py-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(350px,.72fr)]"
           >
             <div className="lobby-title-block">
+              <p className="home-eyebrow">{copy.homeEyebrow}</p>
               <h2 className="display-font mt-2 text-6xl leading-none sm:text-8xl">
                 {selectedTitle}
               </h2>
               <p className="body-font mt-4 max-w-xl text-xl text-muted-foreground">
                 <strong>{selected.name}</strong> · {selected.region}.
               </p>
-              <div className="street-cred mt-8 max-w-lg">
-                <div className="ui-font flex justify-between text-xs">
-                  <span>
-                    {copy.level} {liveLevel}
-                  </span>
-                  <span>
-                    {liveTokens} {copy.tokens.toLowerCase()}
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 bg-muted">
-                  <div className="h-full w-3/4 bg-secondary" />
-                </div>
-              </div>
+              <p className="home-description">{copy.homeDescription}</p>
+              <figure className="selected-route-card">
+                <img
+                  src={selected.icon ?? "/discord-server-icon.png"}
+                  alt=""
+                  width={640}
+                  height={480}
+                  decoding="async"
+                />
+                <figcaption>
+                  <span className="route-kicker">{copy.featuredLabel}</span>
+                  <strong>{selected.name}</strong>
+                  <small>{selected.region}</small>
+                </figcaption>
+                <span className="route-card-index">
+                  {String(maps.indexOf(selected) + 1).padStart(2, "0")}
+                </span>
+              </figure>
               <div
                 className="theme-hud"
                 aria-label={`${copy.level} ${liveLevel}`}
@@ -2600,7 +2740,9 @@ export default function MapHub() {
                   <h3>{copy.pickMap}</h3>
                 </div>
                 <span className="collection-count">
-                  {maps.length} {copy.mapsAvailable}
+                  {normalizedMapSearch
+                    ? `${filteredMaps.length}/${maps.length} ${copy.mapsAvailable}`
+                    : `${maps.length} ${copy.mapsAvailable}`}
                 </span>
               </div>
               {selected.id === "moggers" && (
@@ -2611,21 +2753,41 @@ export default function MapHub() {
                 </p>
               )}
 
+              <label className="map-search">
+                <Search aria-hidden="true" />
+                <input
+                  type="search"
+                  value={mapSearch}
+                  onChange={(event) => setMapSearch(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchPlaceholder}
+                />
+                {mapSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setMapSearch("")}
+                    aria-label={copy.clearSearch}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                )}
+              </label>
               <div
                 className="map-selector"
                 role="radiogroup"
                 aria-label={copy.map}
               >
-                {maps.map((map) => {
+                {filteredMaps.map((map) => {
                   const active = map.id === selectedMap;
                   return (
                     <Button
                       key={map.id}
                       type="button"
                       variant={active ? "default" : "outline"}
-                      className="map-button"
+                      className="map-button map-card"
                       role="radio"
                       aria-checked={active}
+                      aria-label={`${map.name}, ${map.region}`}
                       data-map-id={map.id}
                       onClick={() => setSelectedMap(map.id)}
                     >
@@ -2634,19 +2796,26 @@ export default function MapHub() {
                           className="map-button-icon"
                           src={map.icon}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : map.showMark === false ? null : (
                         <span className="map-button-mark">
                           {map.name.slice(0, 1)}
                         </span>
                       )}
-                      <span className="ui-font text-sm">{map.name}</span>
-                      <span className="text-[10px] opacity-70">
-                        {map.region}
+                      <span className="map-card-copy">
+                        <strong>{map.name}</strong>
+                        <small>{map.region}</small>
                       </span>
                     </Button>
                   );
                 })}
+                {filteredMaps.length === 0 && (
+                  <p className="map-empty" role="status">
+                    {copy.noMapsFound}
+                  </p>
+                )}
               </div>
               <p className="body-font mt-4 text-base text-muted-foreground">
                 {copy.selectedBuild}: <strong>{selected.name}</strong> ·{" "}
@@ -2706,6 +2875,29 @@ export default function MapHub() {
               )}
             </div>
           </section>
+          <section
+            className="site-about"
+            id="about"
+            aria-labelledby="about-title"
+          >
+            <div className="about-mark" aria-hidden="true">
+              SV
+            </div>
+            <div>
+              <p className="home-eyebrow">SURFVT14 // HUB</p>
+              <h2 id="about-title">{copy.aboutTitle}</h2>
+              <p>{copy.aboutBody}</p>
+            </div>
+            <a className="about-top-link" href="#collection">
+              {copy.collection} <span aria-hidden="true">↑</span>
+            </a>
+          </section>
+          <footer className="site-footer">
+            <span>
+              <strong>SURFVT14</strong> · {maps.length} {copy.mapsAvailable}
+            </span>
+            <a href="#collection">{copy.pickMap}</a>
+          </footer>
         </div>
 
         {veniceChoiceOpen && !isPlaying && (
@@ -3055,7 +3247,9 @@ export default function MapHub() {
                       <span>{copy.timerFont}</span>
                       <select
                         value={settings.timerFont}
-                        onChange={(e) => updateSetting("timerFont", e.target.value)}
+                        onChange={(e) =>
+                          updateSetting("timerFont", e.target.value)
+                        }
                       >
                         <option>Rajdhani</option>
                         <option>Orbitron</option>
@@ -3134,34 +3328,34 @@ export default function MapHub() {
                 </label>
                 {settings.timerStyle !== "livesplit" && (
                   <>
-                <label>
-                  <span>
-                    {copy.horizontal} <b>{settings.controlX}%</b>
-                  </span>
-                  <input
-                    type="range"
-                    min="5"
-                    max="90"
-                    value={settings.controlX}
-                    onChange={(e) =>
-                      updateSetting("controlX", Number(e.target.value))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>
-                    {copy.vertical} <b>{settings.controlY}%</b>
-                  </span>
-                  <input
-                    type="range"
-                    min="5"
-                    max="90"
-                    value={settings.controlY}
-                    onChange={(e) =>
-                      updateSetting("controlY", Number(e.target.value))
-                    }
-                  />
-                </label>
+                    <label>
+                      <span>
+                        {copy.horizontal} <b>{settings.controlX}%</b>
+                      </span>
+                      <input
+                        type="range"
+                        min="5"
+                        max="90"
+                        value={settings.controlX}
+                        onChange={(e) =>
+                          updateSetting("controlX", Number(e.target.value))
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>
+                        {copy.vertical} <b>{settings.controlY}%</b>
+                      </span>
+                      <input
+                        type="range"
+                        min="5"
+                        max="90"
+                        value={settings.controlY}
+                        onChange={(e) =>
+                          updateSetting("controlY", Number(e.target.value))
+                        }
+                      />
+                    </label>
                   </>
                 )}
                 <label>

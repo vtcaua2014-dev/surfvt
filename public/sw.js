@@ -1,6 +1,6 @@
-const CACHE_NAME = "surfvt14-map-cache-v19-gjs-chrono-neworleans";
+const CACHE_NAME = "surfvt14-map-cache-v20-shared-wasm-hub";
 const CACHE_PREFIX = "/maps/";
-const EXTRA_PREFIXES = ["/moggers/", "/map-icons/"];
+const EXTRA_PREFIXES = ["/moggers/", "/map-icons/", "/maps-shared/"];
 
 function isCacheableMapRequest(request) {
   if (request.method !== "GET") return false;
@@ -30,7 +30,10 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith("surfvt14-map-cache-") && key !== CACHE_NAME)
+            .filter(
+              (key) =>
+                key.startsWith("surfvt14-map-cache-") && key !== CACHE_NAME,
+            )
             .map((key) => caches.delete(key)),
         ),
       )

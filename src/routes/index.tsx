@@ -4,21 +4,22 @@ import MapHub from "@/components/MapHub";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Subway Surfers Map Hub — SurfVT14" },
+      { title: "SurfVT14 — 27 opções para jogar" },
       {
         name: "description",
         content:
-          "Escolha entre seis mapas Subway Surfers e jogue direto no SurfVT14.",
+          "Explore 27 opções de mapas e jogos, escolha sua rota e jogue direto no navegador com o SurfVT14.",
       },
-      { property: "og:title", content: "Subway Surfers Map Hub — SurfVT14" },
+      { property: "og:title", content: "SurfVT14 — 27 opções para jogar" },
       {
         property: "og:description",
         content:
-          "Escolha entre seis mapas Subway Surfers e jogue direto no SurfVT14.",
+          "Explore 27 opções de mapas e jogos, escolha sua rota e jogue direto no navegador com o SurfVT14.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://surfvt14.vercel.app/" }],
   }),
   component: MapHub,
 });
