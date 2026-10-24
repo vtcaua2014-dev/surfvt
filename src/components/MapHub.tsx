@@ -29,6 +29,7 @@ import {
 import nightCity from "@/assets/night-city-lobby.jpg";
 import newYork from "@/assets/new-york-lobby.jpg";
 import { Button } from "@/components/ui/button";
+import SurfVtBetaHub from "@/components/SurfVtBetaHub";
 
 type MapId =
   | "moggers"
@@ -381,6 +382,72 @@ const timerColors = ["cyan", "magenta", "red", "lime", "white"] as const;
 type TimerColor = (typeof timerColors)[number];
 type ControlScheme = "WASD" | "IJKL" | "SETAS" | "PERSONALIZADO";
 type Language = "pt-BR" | "en" | "de" | "fr" | "zh";
+type BetaFilter = "all" | "surfers" | "other";
+const betaUiLabels: Record<
+  Language,
+  Record<BetaFilter, string> & {
+    headlineA: string;
+    headlineB: string;
+    random: string;
+    download: string;
+    warning: string;
+  }
+> = {
+  "pt-BR": {
+    all: "TODOS",
+    surfers: "SUBWAY SURFERS",
+    other: "JOGO INDEPENDENTE",
+    headlineA: "ESCOLHA SUA",
+    headlineB: "PRÓXIMA PISTA.",
+    random: "SURPREENDA-ME",
+    download: "DOWNLOAD",
+    warning:
+      "Jogo independente; não é um mapa de Subway Surfers. Cronômetros não são compatíveis.",
+  },
+  en: {
+    all: "ALL",
+    surfers: "SUBWAY SURFERS",
+    other: "INDEPENDENT GAME",
+    headlineA: "RUN THE",
+    headlineB: "RIGHT TRACK.",
+    random: "SURPRISE ME",
+    download: "DOWNLOAD",
+    warning:
+      "Independent game, not a Subway Surfers map. Timers are not supported.",
+  },
+  de: {
+    all: "ALLE",
+    surfers: "SUBWAY SURFERS",
+    other: "EIGENSTÄNDIGES SPIEL",
+    headlineA: "WÄHLE DEINE",
+    headlineB: "NÄCHSTE STRECKE.",
+    random: "ZUFALLSAUSWAHL",
+    download: "HERUNTERLADEN",
+    warning:
+      "Eigenständiges Spiel, keine Subway-Surfers-Karte. Timer werden nicht unterstützt.",
+  },
+  fr: {
+    all: "TOUS",
+    surfers: "SUBWAY SURFERS",
+    other: "JEU INDÉPENDANT",
+    headlineA: "CHOISIS TA",
+    headlineB: "PROCHAINE PISTE.",
+    random: "SURPRENEZ-MOI",
+    download: "TÉLÉCHARGER",
+    warning:
+      "Jeu indépendant, pas une carte Subway Surfers. Les chronomètres ne sont pas compatibles.",
+  },
+  zh: {
+    all: "全部",
+    surfers: "SUBWAY SURFERS",
+    other: "独立游戏",
+    headlineA: "选择你的",
+    headlineB: "下一条赛道。",
+    random: "随机选择",
+    download: "下载",
+    warning: "这是独立游戏，不是 Subway Surfers 地图；不支持计时器。",
+  },
+};
 type Resolution =
   "fullscreen" | "608x1080" | "890x1080" | "640x1080" | "840x1080";
 type FpsCap = "unlocked" | "30" | "60" | "120" | "240";
@@ -2229,6 +2296,16 @@ export default function MapHub() {
     () => readStoredProfile().favoriteMap,
   );
   const [mapSearch, setMapSearch] = useState("");
+  const [interfaceMode, setInterfaceMode] = useState<"alpha" | "beta">(() => {
+    try {
+      return localStorage.getItem("surfvt14-interface") === "beta"
+        ? "beta"
+        : "alpha";
+    } catch {
+      return "alpha";
+    }
+  });
+  const [betaFilter, setBetaFilter] = useState<BetaFilter>("all");
   const [launchedMap, setLaunchedMap] = useState<MapId>("zurich");
   const [veniceVariant, setVeniceVariant] = useState<VeniceVariant>("normal");
   const [veniceChoiceOpen, setVeniceChoiceOpen] = useState(false);
@@ -2310,6 +2387,11 @@ export default function MapHub() {
       window.removeEventListener("pagehide", persist);
     };
   }, [settings]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("surfvt14-interface", interfaceMode);
+    } catch {}
+  }, [interfaceMode]);
   useEffect(() => {
     const authStatus = new URLSearchParams(window.location.search).get("auth");
     if (authStatus === "discord-connected")
@@ -2522,7 +2604,7 @@ export default function MapHub() {
 
   return (
     <div
-      className={`theme-shell theme-${theme} saturation-${settings.saturation}`}
+      className={`theme-shell theme-${theme} saturation-${settings.saturation} ${interfaceMode === "beta" ? "beta-mode" : ""}`}
       style={
         {
           "--hub-saturation":
@@ -2600,21 +2682,32 @@ export default function MapHub() {
             </nav>
 
             <div
-              className="theme-switcher flex flex-wrap items-center justify-end gap-2"
-              aria-label="Temas da interface"
+              className="theme-switcher interface-switcher flex flex-wrap items-center justify-end gap-2"
+              role="group"
+              aria-label="Versões da interface SurfVT"
             >
-              {(Object.keys(themeMeta) as Theme[]).map((option) => (
-                <Button
-                  key={option}
-                  size="sm"
-                  className={`theme-choice theme-choice-${option}`}
-                  variant={theme === option ? "default" : "outline"}
-                  onClick={() => setTheme(option)}
-                  onPointerUp={pointerAction(() => setTheme(option))}
-                >
-                  {themeMeta[option].label}
-                </Button>
-              ))}
+              <Button
+                type="button"
+                size="sm"
+                className={`interface-mode-button interface-mode-alpha ${interfaceMode === "alpha" ? "is-active" : ""}`}
+                variant={interfaceMode === "alpha" ? "default" : "outline"}
+                aria-pressed={interfaceMode === "alpha"}
+                onClick={() => setInterfaceMode("alpha")}
+                onPointerUp={pointerAction(() => setInterfaceMode("alpha"))}
+              >
+                Alpha SurfVT
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className={`interface-mode-button interface-mode-beta ${interfaceMode === "beta" ? "is-active" : ""}`}
+                variant={interfaceMode === "beta" ? "default" : "outline"}
+                aria-pressed={interfaceMode === "beta"}
+                onClick={() => setInterfaceMode("beta")}
+                onPointerUp={pointerAction(() => setInterfaceMode("beta"))}
+              >
+                Beta SurfVT
+              </Button>
             </div>
             <Button
               variant="outline"
@@ -2651,230 +2744,252 @@ export default function MapHub() {
               </div>
             )}
           </header>
-          <section className="site-community" id="community">
-            <a
-              className="discord-banner"
-              href="https://discord.gg/jNVZU6pgrm"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <img
-                className="discord-server-icon"
-                src="/discord-server-icon.png"
-                alt="Discord"
-              />{" "}
-              <span>
-                <strong>{copy.communityTitle}</strong>
-                <small>{copy.communitySub}</small>
-                <span className="community-action">
-                  {copy.communityCta} <i aria-hidden="true">↗</i>
-                </span>
-              </span>
-              <span className="discord-arrow">↗</span>
-            </a>
-          </section>
-
-          <section
-            id="collection"
-            className="home-layout grid flex-1 items-center gap-6 py-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(350px,.72fr)]"
-          >
-            <div className="lobby-title-block">
-              <p className="home-eyebrow">{copy.homeEyebrow}</p>
-              <h2 className="display-font mt-2 text-6xl leading-none sm:text-8xl">
-                {selectedTitle}
-              </h2>
-              <p className="body-font mt-4 max-w-xl text-xl text-muted-foreground">
-                <strong>{selected.name}</strong> · {selected.region}.
-              </p>
-              <p className="home-description">{copy.homeDescription}</p>
-              <figure className="selected-route-card">
-                <img
-                  src={selected.icon ?? "/discord-server-icon.png"}
-                  alt=""
-                  width={640}
-                  height={480}
-                  decoding="async"
-                />
-                <figcaption>
-                  <span className="route-kicker">{copy.featuredLabel}</span>
-                  <strong>{selected.name}</strong>
-                  <small>{selected.region}</small>
-                </figcaption>
-                <span className="route-card-index">
-                  {String(maps.indexOf(selected) + 1).padStart(2, "0")}
-                </span>
-              </figure>
-              <div
-                className="theme-hud"
-                aria-label={`${copy.level} ${liveLevel}`}
+          {interfaceMode === "alpha" && (
+            <section className="site-community" id="community">
+              <a
+                className="discord-banner"
+                href="https://discord.gg/jNVZU6pgrm"
+                target="_blank"
+                rel="noreferrer"
               >
-                <div className="hud-rank">
-                  <span className="hud-kicker">{copy.level}</span>
-                  <strong>{liveLevel}</strong>
-                  <div className="hud-progress">
-                    <i style={{ width: `${(liveTokens % 10) * 10}%` }} />
+                <img
+                  className="discord-server-icon"
+                  src="/discord-server-icon.png"
+                  alt="Discord"
+                />{" "}
+                <span>
+                  <strong>{copy.communityTitle}</strong>
+                  <small>{copy.communitySub}</small>
+                  <span className="community-action">
+                    {copy.communityCta} <i aria-hidden="true">↗</i>
+                  </span>
+                </span>
+                <span className="discord-arrow">↗</span>
+              </a>
+            </section>
+          )}
+          {interfaceMode === "beta" && (
+            <SurfVtBetaHub
+              maps={maps}
+              searchResults={filteredMaps}
+              selected={selected}
+              selectedMapId={selectedMap}
+              mapSearch={mapSearch}
+              filter={betaFilter}
+              labels={betaUiLabels[settings.language]}
+              copy={copy}
+              p14Backup={p14BackupCopy[settings.language]}
+              busy={isLoadingGame || isPlaying}
+              onSearch={setMapSearch}
+              onFilter={setBetaFilter}
+              onSelectMap={(mapId) => setSelectedMap(mapId as MapId)}
+              onPlay={() => handlePlay()}
+            />
+          )}
+
+          {interfaceMode === "alpha" && (
+            <section
+              id="collection"
+              className="home-layout grid flex-1 items-center gap-6 py-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(350px,.72fr)]"
+            >
+              <div className="lobby-title-block">
+                <p className="home-eyebrow">{copy.homeEyebrow}</p>
+                <h2 className="display-font mt-2 text-6xl leading-none sm:text-8xl">
+                  {selectedTitle}
+                </h2>
+                <p className="body-font mt-4 max-w-xl text-xl text-muted-foreground">
+                  <strong>{selected.name}</strong> · {selected.region}.
+                </p>
+                <p className="home-description">{copy.homeDescription}</p>
+                <figure className="selected-route-card">
+                  <img
+                    src={selected.icon ?? "/discord-server-icon.png"}
+                    alt=""
+                    width={640}
+                    height={480}
+                    decoding="async"
+                  />
+                  <figcaption>
+                    <span className="route-kicker">{copy.featuredLabel}</span>
+                    <strong>{selected.name}</strong>
+                    <small>{selected.region}</small>
+                  </figcaption>
+                  <span className="route-card-index">
+                    {String(maps.indexOf(selected) + 1).padStart(2, "0")}
+                  </span>
+                </figure>
+                <div
+                  className="theme-hud"
+                  aria-label={`${copy.level} ${liveLevel}`}
+                >
+                  <div className="hud-rank">
+                    <span className="hud-kicker">{copy.level}</span>
+                    <strong>{liveLevel}</strong>
+                    <div className="hud-progress">
+                      <i style={{ width: `${(liveTokens % 10) * 10}%` }} />
+                    </div>
+                  </div>
+                  <div className="hud-token">
+                    <span className="hud-kicker">{copy.tokens}</span>
+                    <strong>
+                      {theme === "aot" ? (
+                        <Swords />
+                      ) : theme === "scott" ? (
+                        <Heart />
+                      ) : theme === "jujutsu" ? (
+                        <Zap />
+                      ) : (
+                        <Flame />
+                      )}{" "}
+                      {liveTokens}
+                    </strong>
+                    <small>{copy.accountOnly}</small>
                   </div>
                 </div>
-                <div className="hud-token">
-                  <span className="hud-kicker">{copy.tokens}</span>
-                  <strong>
-                    {theme === "aot" ? (
-                      <Swords />
-                    ) : theme === "scott" ? (
-                      <Heart />
-                    ) : theme === "jujutsu" ? (
-                      <Zap />
-                    ) : (
-                      <Flame />
-                    )}{" "}
-                    {liveTokens}
-                  </strong>
-                  <small>{copy.accountOnly}</small>
-                </div>
               </div>
-            </div>
 
-            <div className="control-panel">
-              <div className="collection-heading">
-                <div>
-                  <h3>{copy.pickMap}</h3>
+              <div className="control-panel">
+                <div className="collection-heading">
+                  <div>
+                    <h3>{copy.pickMap}</h3>
+                  </div>
+                  <span className="collection-count">
+                    {normalizedMapSearch
+                      ? `${filteredMaps.length}/${maps.length} ${copy.mapsAvailable}`
+                      : `${maps.length} ${copy.mapsAvailable}`}
+                  </span>
                 </div>
-                <span className="collection-count">
-                  {normalizedMapSearch
-                    ? `${filteredMaps.length}/${maps.length} ${copy.mapsAvailable}`
-                    : `${maps.length} ${copy.mapsAvailable}`}
-                </span>
-              </div>
-              {selected.id === "moggers" && (
-                <p className="standalone-game-warning" role="note">
-                  Este é um jogo independente, não um mapa de Subway Surfers.
-                  Ele usa os controles, contador de FPS e SoundCloud do hub, mas
-                  não é compatível com cronômetros.
-                </p>
-              )}
-
-              <label className="map-search">
-                <Search aria-hidden="true" />
-                <input
-                  type="search"
-                  value={mapSearch}
-                  onChange={(event) => setMapSearch(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
-                  aria-label={copy.searchPlaceholder}
-                />
-                {mapSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setMapSearch("")}
-                    aria-label={copy.clearSearch}
-                  >
-                    <X aria-hidden="true" />
-                  </button>
+                {selected.id === "moggers" && (
+                  <p className="standalone-game-warning" role="note">
+                    Este é um jogo independente, não um mapa de Subway Surfers.
+                    Ele usa os controles, contador de FPS e SoundCloud do hub,
+                    mas não é compatível com cronômetros.
+                  </p>
                 )}
-              </label>
-              <div
-                className="map-selector"
-                role="radiogroup"
-                aria-label={copy.map}
-              >
-                {filteredMaps.map((map) => {
-                  const active = map.id === selectedMap;
-                  return (
-                    <Button
-                      key={map.id}
+
+                <label className="map-search">
+                  <Search aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={mapSearch}
+                    onChange={(event) => setMapSearch(event.target.value)}
+                    placeholder={copy.searchPlaceholder}
+                    aria-label={copy.searchPlaceholder}
+                  />
+                  {mapSearch && (
+                    <button
                       type="button"
-                      variant={active ? "default" : "outline"}
-                      className="map-button map-card"
-                      role="radio"
-                      aria-checked={active}
-                      aria-label={`${map.name}, ${map.region}`}
-                      data-map-id={map.id}
-                      onClick={() => setSelectedMap(map.id)}
+                      onClick={() => setMapSearch("")}
+                      aria-label={copy.clearSearch}
                     >
-                      {map.icon ? (
-                        <img
-                          className="map-button-icon"
-                          src={map.icon}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : map.showMark === false ? null : (
-                        <span className="map-button-mark">
-                          {map.name.slice(0, 1)}
+                      <X aria-hidden="true" />
+                    </button>
+                  )}
+                </label>
+                <div
+                  className="map-selector"
+                  role="radiogroup"
+                  aria-label={copy.map}
+                >
+                  {filteredMaps.map((map) => {
+                    const active = map.id === selectedMap;
+                    return (
+                      <Button
+                        key={map.id}
+                        type="button"
+                        variant={active ? "default" : "outline"}
+                        className="map-button map-card"
+                        role="radio"
+                        aria-checked={active}
+                        aria-label={`${map.name}, ${map.region}`}
+                        data-map-id={map.id}
+                        onClick={() => setSelectedMap(map.id)}
+                      >
+                        {map.icon ? (
+                          <img
+                            className="map-button-icon"
+                            src={map.icon}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : map.showMark === false ? null : (
+                          <span className="map-button-mark">
+                            {map.name.slice(0, 1)}
+                          </span>
+                        )}
+                        <span className="map-card-copy">
+                          <strong>{map.name}</strong>
+                          <small>{map.region}</small>
                         </span>
-                      )}
-                      <span className="map-card-copy">
-                        <strong>{map.name}</strong>
-                        <small>{map.region}</small>
-                      </span>
+                      </Button>
+                    );
+                  })}
+                  {filteredMaps.length === 0 && (
+                    <p className="map-empty" role="status">
+                      {copy.noMapsFound}
+                    </p>
+                  )}
+                </div>
+                <p className="body-font mt-4 text-base text-muted-foreground">
+                  {copy.selectedBuild}: <strong>{selected.name}</strong> ·{" "}
+                  {selected.region}
+                </p>
+                <div className="system-grid">
+                  <div>
+                    <span>{copy.unity}</span>2019.4.18f1
+                  </div>
+                  <div>
+                    <span>{copy.render}</span>WEBGL 2.0
+                  </div>
+                  <div>
+                    <span>{copy.build}</span>LOCAL
+                  </div>
+                  <div>
+                    <span>{copy.mapLabel}</span>
+                    {selected.name.toUpperCase()}
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="play-button"
+                  onClick={() => handlePlay()}
+                  disabled={isLoadingGame || isPlaying}
+                >
+                  <Play className="fill-current" />
+                  <span>
+                    {copy.play} {selected.name.toUpperCase()}
+                  </span>
+                  <Maximize2 className="ml-auto" />
+                </Button>
+                {selected.id === "subwaycrackers" && (
+                  <div
+                    className="mt-4 rounded-lg border border-border/70 bg-card/40 p-4 text-left"
+                    role="note"
+                  >
+                    <p className="ui-font text-xs font-bold text-secondary">
+                      {p14BackupCopy[settings.language].title}
+                    </p>
+                    <p className="body-font mt-2 text-sm text-muted-foreground">
+                      {p14BackupCopy[settings.language].instructions}
+                    </p>
+                    <p className="body-font mt-2 text-xs text-muted-foreground">
+                      {p14BackupCopy[settings.language].warning}
+                    </p>
+                    <Button asChild variant="outline" className="mt-3 w-full">
+                      <a
+                        href="/downloads/subwaycrackers-p14-save.bin"
+                        download="SubwayCrackers-P14-save.bin"
+                      >
+                        <Download aria-hidden="true" />
+                        {p14BackupCopy[settings.language].download}
+                      </a>
                     </Button>
-                  );
-                })}
-                {filteredMaps.length === 0 && (
-                  <p className="map-empty" role="status">
-                    {copy.noMapsFound}
-                  </p>
+                  </div>
                 )}
               </div>
-              <p className="body-font mt-4 text-base text-muted-foreground">
-                {copy.selectedBuild}: <strong>{selected.name}</strong> ·{" "}
-                {selected.region}
-              </p>
-              <div className="system-grid">
-                <div>
-                  <span>{copy.unity}</span>2019.4.18f1
-                </div>
-                <div>
-                  <span>{copy.render}</span>WEBGL 2.0
-                </div>
-                <div>
-                  <span>{copy.build}</span>LOCAL
-                </div>
-                <div>
-                  <span>{copy.mapLabel}</span>
-                  {selected.name.toUpperCase()}
-                </div>
-              </div>
-              <Button
-                size="lg"
-                className="play-button"
-                onClick={() => handlePlay()}
-                disabled={isLoadingGame || isPlaying}
-              >
-                <Play className="fill-current" />
-                <span>
-                  {copy.play} {selected.name.toUpperCase()}
-                </span>
-                <Maximize2 className="ml-auto" />
-              </Button>
-              {selected.id === "subwaycrackers" && (
-                <div
-                  className="mt-4 rounded-lg border border-border/70 bg-card/40 p-4 text-left"
-                  role="note"
-                >
-                  <p className="ui-font text-xs font-bold text-secondary">
-                    {p14BackupCopy[settings.language].title}
-                  </p>
-                  <p className="body-font mt-2 text-sm text-muted-foreground">
-                    {p14BackupCopy[settings.language].instructions}
-                  </p>
-                  <p className="body-font mt-2 text-xs text-muted-foreground">
-                    {p14BackupCopy[settings.language].warning}
-                  </p>
-                  <Button asChild variant="outline" className="mt-3 w-full">
-                    <a
-                      href="/downloads/subwaycrackers-p14-save.bin"
-                      download="SubwayCrackers-P14-save.bin"
-                    >
-                      <Download aria-hidden="true" />
-                      {p14BackupCopy[settings.language].download}
-                    </a>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </section>
+            </section>
+          )}
           <section
             className="site-about"
             id="about"
@@ -3127,6 +3242,37 @@ export default function MapHub() {
                   </p>
                 )}
               </div>
+              <section
+                className="theme-settings"
+                aria-labelledby="theme-settings-title"
+              >
+                <div className="theme-settings-heading">
+                  <div>
+                    <span id="theme-settings-title">{copy.favoriteTheme}</span>
+                    <small>{themeMeta[theme].label}</small>
+                  </div>
+                </div>
+                <div
+                  className="theme-settings-options"
+                  role="group"
+                  aria-label={copy.favoriteTheme}
+                >
+                  {(Object.keys(themeMeta) as Theme[]).map((option) => (
+                    <Button
+                      key={option}
+                      type="button"
+                      size="sm"
+                      className={`theme-settings-option theme-settings-${option}`}
+                      variant={theme === option ? "default" : "outline"}
+                      aria-pressed={theme === option}
+                      onClick={() => setTheme(option)}
+                      onPointerUp={pointerAction(() => setTheme(option))}
+                    >
+                      {themeMeta[option].label}
+                    </Button>
+                  ))}
+                </div>
+              </section>
               <div className="hub-settings-grid">
                 <label>
                   <span>{copy.language}</span>
