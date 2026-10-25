@@ -451,15 +451,20 @@ const betaUiLabels: Record<
 type Resolution =
   "fullscreen" | "608x1080" | "890x1080" | "640x1080" | "840x1080";
 type FpsCap = "unlocked" | "30" | "60" | "120" | "240";
+type GraphicsMode = "off" | "performance" | "low" | "medium" | "high" | "ultra";
 type TimerStyle = "native" | "livesplit" | "chrono";
 type HubSettings = {
   saturation: "off" | "low" | "medium" | "high";
+  graphicsMode: GraphicsMode;
   timerEnabled: boolean;
   timerStyle: TimerStyle;
   timerScale: number;
   timerFont: string;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
+  autoBoostCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
+  autoBoostCount: number;
+  autoBoostDelay: number;
   wasdEnabled: boolean;
   controls: ControlScheme;
   customControls: { up: string; left: string; down: string; right: string };
@@ -476,12 +481,16 @@ type HubSettings = {
 };
 const defaultSettings: HubSettings = {
   saturation: "off",
+  graphicsMode: "off",
   timerEnabled: true,
   timerStyle: "chrono",
   timerScale: 100,
   timerFont: "Rajdhani",
   autoBoostEnabled: false,
   autoBoostHotkey: "B",
+  autoBoostCorner: "bottomLeft",
+  autoBoostCount: 3,
+  autoBoostDelay: 60,
   wasdEnabled: true,
   controls: "WASD",
   customControls: { up: "T", left: "F", down: "G", right: "H" },
@@ -1065,6 +1074,34 @@ const p14BackupCopy: Record<
   },
 };
 
+function useTimerSettingsHold(running: boolean) {
+  const hold = useRef<number | null>(null);
+  const fired = useRef(false);
+  const clear = useCallback(() => {
+    if (hold.current != null) window.clearTimeout(hold.current);
+    hold.current = null;
+  }, []);
+  useEffect(() => clear, [clear]);
+  return {
+    onPointerDownCapture: () => {
+      fired.current = false;
+      clear();
+      if (running) hold.current = window.setTimeout(() => {
+        fired.current = true;
+        window.dispatchEvent(new Event("SURFVT14_OPEN_TIMER_SETTINGS"));
+      }, 2000);
+    },
+    onPointerUpCapture: clear,
+    onPointerCancelCapture: clear,
+    onClickCapture: (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!fired.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      fired.current = false;
+    },
+  };
+}
+
 function FloatingTimer({ settings }: { settings: HubSettings }) {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -1084,7 +1121,7 @@ function FloatingTimer({ settings }: { settings: HubSettings }) {
     left: number;
     top: number;
   } | null>(null);
-  const tapTimer = useRef<number | null>(null);
+  const settingsHold = useTimerSettingsHold(running);
 
   const toggle = useCallback(() => {
     setRunning((current) => {
@@ -1142,25 +1179,7 @@ function FloatingTimer({ settings }: { settings: HubSettings }) {
     };
   }, [reset, split, toggle]);
 
-  useEffect(
-    () => () => {
-      if (tapTimer.current) window.clearTimeout(tapTimer.current);
-    },
-    [],
-  );
-
-  const handleTap = () => {
-    if (tapTimer.current) {
-      window.clearTimeout(tapTimer.current);
-      tapTimer.current = null;
-      reset();
-      return;
-    }
-    tapTimer.current = window.setTimeout(() => {
-      tapTimer.current = null;
-      toggle();
-    }, 260);
-  };
+  const handleTap = () => toggle();
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.currentTarget;
@@ -1205,6 +1224,7 @@ function FloatingTimer({ settings }: { settings: HubSettings }) {
         fontFamily: settings.timerFont,
       }}
       aria-label="Cronômetro flutuante"
+      {...settingsHold}
     >
       <div
         className="timer-drag"
@@ -1216,7 +1236,7 @@ function FloatingTimer({ settings }: { settings: HubSettings }) {
         title="Arraste para mover"
       >
         <GripHorizontal aria-hidden="true" />
-        <span>FLOATING TIMER</span>
+        <span>Floating Clock</span>
         <span className={`timer-status ${running ? "is-running" : ""}`} />
       </div>
       <button
@@ -1308,6 +1328,8 @@ function saturationValue(level: HubSettings["saturation"]) {
 function ChronoTimer({ settings }: { settings: HubSettings }) {
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const settingsHold = useTimerSettingsHold(running);
+  const tapTimer = useRef<number | null>(null);
   const startedAt = useRef<number | null>(null);
   const baseElapsed = useRef(0);
   const elapsedRef = useRef(0);
@@ -1387,36 +1409,37 @@ function ChronoTimer({ settings }: { settings: HubSettings }) {
     setElapsed(0);
     setRunning(false);
   };
-  const text = formatTime(elapsed).replace(/^00:/, "");
+  const handleTimerTap = () => {
+    if (tapTimer.current != null) {
+      window.clearTimeout(tapTimer.current);
+      tapTimer.current = null;
+      reset();
+      return;
+    }
+    tapTimer.current = window.setTimeout(() => {
+      tapTimer.current = null;
+      toggle();
+    }, 260);
+  };
+  useEffect(() => () => {
+    if (tapTimer.current != null) window.clearTimeout(tapTimer.current);
+  }, []);
+  const [hours, minutes, seconds] = formatTime(elapsed).split(/[.:]/);
   return (
     <div
-      className={`chrono-port ${running ? "is-running" : elapsed > 0 ? "is-paused" : ""}`}
-      style={{
-        transform: `scale(${settings.timerScale / 100})`,
-        transformOrigin: "top left",
-        fontFamily: settings.timerFont,
+      className={"chrono-port " + (running ? "is-running" : elapsed > 0 ? "is-paused" : "")}
+      style={{ transform: "scale(" + settings.timerScale / 100 + ")", transformOrigin: "top left", fontFamily: settings.timerFont }}
+      aria-label="Cronômetro Chrono"
+      {...settingsHold}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("button")) return;
+        handleTimerTap();
       }}
-      aria-label="Chrono v4.0 portado do APK para navegador"
     >
-      <div className="chrono-port-topline">
-        <span className="chrono-port-led" />
-        <span>CHRONO V4.0</span>
-        <small>ANDROID PORT · WEB</small>
-      </div>
-      <div className="chrono-port-display">
-        <span className="chrono-port-prefix">TIME</span>
-        {formatTime(elapsed)}
-      </div>
-      <div className="chrono-port-status">
-        {running ? "RUNNING" : elapsed > 0 ? "PAUSED" : "READY"}
-      </div>
-      <div className="chrono-port-actions">
-        <button type="button" onClick={toggle}>
-          {running ? "PAUSE" : "START"}
-        </button>
-        <button type="button" onClick={reset}>
-          RESET
-        </button>
+      <div className="chrono-ext-cells" aria-label="Toque para iniciar ou pausar; toque duplo para reiniciar">
+        <span className="chrono-ext-cell">{hours}</span>
+        <span className="chrono-ext-cell">{minutes}</span>
+        <span className="chrono-ext-cell">{seconds}</span>
       </div>
     </div>
   );
@@ -1537,11 +1560,15 @@ function GamePlayer({
     const canvas = doc?.querySelector("canvas") as HTMLCanvasElement | null;
     if (!doc || !canvas) return;
     const rect = canvas.getBoundingClientRect();
-    // O foguete configurado para o AutoBoost fica no canto inferior esquerdo.
-    // Centro da área visual do foguete: abaixo da estrela azul e dentro do
-    // quadrado inferior esquerdo, sem mover nem substituir o botão do Unity.
-    const clientX = rect.left + rect.width * 0.12;
-    const clientY = rect.top + rect.height * 0.86;
+    const inset = Math.max(12, Math.min(40, rect.width / 8, rect.height / 8));
+    const points: Record<string, [number, number]> = {
+      topLeft: [rect.left + inset, rect.top + inset],
+      topRight: [rect.right - inset, rect.top + inset],
+      bottomLeft: [rect.left + inset, rect.bottom - inset],
+      bottomRight: [rect.right - inset, rect.bottom - inset],
+      center: [rect.left + rect.width / 2, rect.top + rect.height / 2],
+    };
+    const [clientX, clientY] = points[settings.autoBoostCorner] ?? points.bottomLeft;
     // Dispatch on the canvas itself. On mobile, elementFromPoint can return a
     // Unity child surface that does not have the WebGL input handlers attached.
     const target = canvas as HTMLElement;
@@ -1560,7 +1587,7 @@ function GamePlayer({
       const pointerInit = {
         ...mouse,
         pointerId: 914,
-        pointerType: "touch",
+        pointerType: "mouse",
         isPrimary: true,
         width: 1,
         height: 1,
@@ -1570,35 +1597,6 @@ function GamePlayer({
       // desktop builds listen to mouse/pointer events. Send both families.
       try {
         target.dispatchEvent(new PointerEvent("pointerdown", pointerInit));
-      } catch (_) {}
-      try {
-        const TouchCtor = (view as Window & typeof globalThis).Touch;
-        const touch = TouchCtor
-          ? new TouchCtor({
-              identifier: 914,
-              target,
-              clientX,
-              clientY,
-              pageX: clientX,
-              pageY: clientY,
-            })
-          : ({
-              identifier: 914,
-              target,
-              clientX,
-              clientY,
-              pageX: clientX,
-              pageY: clientY,
-            } as unknown as Touch);
-        target.dispatchEvent(
-          new TouchEvent("touchstart", {
-            bubbles: true,
-            cancelable: true,
-            touches: [touch],
-            targetTouches: [touch],
-            changedTouches: [touch],
-          }),
-        );
       } catch (_) {}
       target.dispatchEvent(new MouseEvent("mousedown", mouse));
       try {
@@ -1610,39 +1608,10 @@ function GamePlayer({
           }),
         );
       } catch (_) {}
-      try {
-        const TouchCtor = (view as Window & typeof globalThis).Touch;
-        const touch = TouchCtor
-          ? new TouchCtor({
-              identifier: 914,
-              target,
-              clientX,
-              clientY,
-              pageX: clientX,
-              pageY: clientY,
-            })
-          : ({
-              identifier: 914,
-              target,
-              clientX,
-              clientY,
-              pageX: clientY,
-              pageY: clientY,
-            } as unknown as Touch);
-        target.dispatchEvent(
-          new TouchEvent("touchend", {
-            bubbles: true,
-            cancelable: true,
-            touches: [],
-            targetTouches: [],
-            changedTouches: [touch],
-          }),
-        );
-      } catch (_) {}
       target.dispatchEvent(new MouseEvent("mouseup", { ...mouse, buttons: 0 }));
       target.dispatchEvent(new MouseEvent("click", mouse));
     };
-    [0, 90, 180].forEach((delay) => window.setTimeout(click, delay));
+    Array.from({ length: Math.max(1, Math.min(10, Number(settings.autoBoostCount) || 3)) }, (_, index) => index * Math.max(10, Number(settings.autoBoostDelay) || 60)).forEach((delay) => window.setTimeout(click, delay));
   };
 
   useEffect(() => {
@@ -1824,7 +1793,52 @@ function GamePlayer({
       window.removeEventListener("keydown", handleAutoBoost, true);
       window.removeEventListener("message", handleGameKey);
     };
-  }, [map, settings.autoBoostEnabled, settings.autoBoostHotkey]);
+  }, [map, settings.autoBoostEnabled, settings.autoBoostHotkey, settings.autoBoostCorner, settings.autoBoostCount, settings.autoBoostDelay]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const profiles: Partial<Record<GraphicsMode, Record<string, unknown>>> = {
+      performance: { dpr: 0.75, aa: false, power: "high-performance", q: 0, look: null, sharp: 0, vignette: 0, auto: { target: 55, warm: 4000, every: 2500, window: 1500, steps: [1, 0.83, 0.68, 0.56, 0.47] } },
+      low: { dpr: 0.5, aa: false, power: "low-power", q: 0, look: { b: 0.97, c: 0.94, s: 0.88 }, sharp: 0, vignette: 0 },
+      medium: { dpr: 1, aa: true, power: "default", q: 1, look: { b: 1, c: 1.04, s: 1.06 }, sharp: 0, vignette: 0 },
+      high: { dpr: 1.5, aa: true, power: "high-performance", q: 2, look: { b: 1.02, c: 1.08, s: 1.18 }, sharp: 1, vignette: 0 },
+      ultra: { dpr: 2, aa: true, power: "high-performance", q: 2, look: { b: 1.03, c: 1.1, s: 1.25 }, sharp: 2, vignette: 0.22 },
+    };
+    const applyBridgeConfig = () => {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc?.documentElement) return;
+        const profile = profiles[settings.graphicsMode];
+        const config = {
+          here: true,
+          wasd: { on: false },
+          gfx: profile ? { mode: settings.graphicsMode, ...profile } : null,
+        };
+        const serialized = JSON.stringify(config);
+        if (doc.documentElement.dataset.p14Cfg !== serialized) {
+          doc.documentElement.dataset.p14Cfg = serialized;
+          doc.dispatchEvent(new Event("p14:cfg"));
+        }
+        if (!doc.querySelector('script[data-surfvt14-p14-bridge]')) {
+          const script = doc.createElement("script");
+          script.src = "/chronometers/p14-bridge-main.js";
+          script.async = false;
+          script.dataset.surfvt14P14Bridge = "true";
+          (doc.head || doc.documentElement).appendChild(script);
+        }
+      } catch {
+        // Cross-origin maps cannot expose their document to the site hub.
+      }
+    };
+    frame.addEventListener("load", applyBridgeConfig);
+    applyBridgeConfig();
+    const retry = window.setInterval(applyBridgeConfig, 300);
+    return () => {
+      frame.removeEventListener("load", applyBridgeConfig);
+      window.clearInterval(retry);
+    };
+  }, [settings.graphicsMode]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -1837,12 +1851,16 @@ function GamePlayer({
           type: "SURFVT14_HUB_SETTINGS",
           settings: {
             controls: settings.controls,
+            graphicsMode: settings.graphicsMode,
             timerEnabled: settings.timerEnabled,
             saturation: settings.saturation,
             fpsCap: settings.fpsCap,
             volume: settings.volume,
             autoBoostEnabled: settings.autoBoostEnabled,
             autoBoostHotkey: settings.autoBoostHotkey,
+            autoBoostCorner: settings.autoBoostCorner,
+            autoBoostCount: settings.autoBoostCount,
+            autoBoostDelay: settings.autoBoostDelay,
           },
         },
         "*",
@@ -2305,6 +2323,11 @@ export default function MapHub() {
   const [gameError, setGameError] = useState<string | null>(null);
   const [gameProgress, setGameProgress] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  useEffect(() => {
+    const openTimerSettings = () => setSettingsOpen(true);
+    window.addEventListener("SURFVT14_OPEN_TIMER_SETTINGS", openTimerSettings);
+    return () => window.removeEventListener("SURFVT14_OPEN_TIMER_SETTINGS", openTimerSettings);
+  }, []);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<HubSettings>(() => {
     try {
@@ -3308,6 +3331,12 @@ export default function MapHub() {
                   />
                 </label>
                 <label>
+                  <span>MODO DE GRÁFICOS</span>
+                  <select value={settings.graphicsMode} onChange={(e) => updateSetting("graphicsMode", e.target.value as GraphicsMode)}>
+                    <option value="off">DESLIGADO</option><option value="performance">DESEMPENHO · AUTO</option><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option><option value="ultra">ULTRA</option>
+                  </select>
+                </label>
+                <label>
                   <span>{copy.browserFps}</span>
                   <select
                     value={settings.fpsCap}
@@ -3522,6 +3551,20 @@ export default function MapHub() {
                       if (e.key === "Enter") e.currentTarget.blur();
                     }}
                   />
+                </label>
+                <label>
+                  <span>LOCAL DO AUTOBOOST</span>
+                  <select value={settings.autoBoostCorner} onChange={(e) => updateSetting("autoBoostCorner", e.target.value as HubSettings["autoBoostCorner"])}>
+                    <option value="bottomLeft">CANTO INFERIOR ESQUERDO</option><option value="bottomRight">CANTO INFERIOR DIREITO</option><option value="topLeft">CANTO SUPERIOR ESQUERDO</option><option value="topRight">CANTO SUPERIOR DIREITO</option><option value="center">CENTRO</option>
+                  </select>
+                </label>
+                <label>
+                  <span>CLIQUES AUTOBOOST <b>{settings.autoBoostCount}</b></span>
+                  <select value={settings.autoBoostCount} onChange={(e) => updateSetting("autoBoostCount", Number(e.target.value))}><option value={1}>1</option><option value={3}>3</option><option value={5}>5</option><option value={10}>10</option></select>
+                </label>
+                <label>
+                  <span>INTERVALO AUTOBOOST <b>{settings.autoBoostDelay} ms</b></span>
+                  <input type="range" min="10" max="200" step="10" value={settings.autoBoostDelay} onChange={(e) => updateSetting("autoBoostDelay", Number(e.target.value))} />
                 </label>
                 <label>
                   <span>{copy.fps}</span>
