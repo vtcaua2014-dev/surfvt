@@ -45,7 +45,7 @@ function defaultPrefs(): WidgetPrefsMap {
     livesplit: base(14, 18, "#29cc54", "#000000"),
     chrono: base(14, 18, "#ffffff", "rgba(0,0,0,.88)"),
     fps: base(Math.max(12, width - 110), 18, "#29cc54", "rgba(0,0,0,.78)"),
-    wasd: base(18, Math.max(60, height - 170), "#ffffff", "transparent"),
+    wasd: base(18, Math.max(60, height - 170), "#ffffff", "#15171c"),
   };
 }
 
@@ -56,7 +56,7 @@ function readPrefs(): WidgetPrefsMap {
     return Object.fromEntries(
       (Object.keys(defaults) as WidgetId[]).map((id) => [
         id,
-        { ...defaults[id], ...(stored[id] || {}) },
+        { ...defaults[id], ...(stored[id] || {}), x: Math.max(0, Math.min(window.innerWidth - 24, Number(stored[id]?.x ?? defaults[id].x))), y: Math.max(0, Math.min(window.innerHeight - 24, Number(stored[id]?.y ?? defaults[id].y))) },
       ]),
     ) as WidgetPrefsMap;
   } catch {
@@ -88,7 +88,7 @@ function OverlaySettings({
     <div className="p14-settings-panel" onPointerDown={(event) => event.stopPropagation()}>
       <strong>{id === "wasd" ? "HOTKEYS" : id === "fps" ? "FPS" : "CRONÔMETRO"}</strong>
       <label>Cor<input type="color" value={prefs.color} onChange={(event) => update({ color: event.target.value })} /></label>
-      {id !== "wasd" && (
+      {true && (
         <label>Fundo<input type="color" value={prefs.background.startsWith("#") ? prefs.background : "#000000"} onChange={(event) => update({ background: event.target.value })} /></label>
       )}
       <label>Fonte
