@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Flag,
-  GripHorizontal,
   Maximize2,
   Palette,
-  Pause,
   Play,
-  RotateCcw,
   TriangleAlert,
   Swords,
   Heart,
@@ -459,8 +456,6 @@ type HubSettings = {
   graphicsMode: GraphicsMode;
   timerEnabled: boolean;
   timerStyle: TimerStyle;
-  timerScale: number;
-  timerFont: string;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
   autoBoostCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
@@ -469,9 +464,6 @@ type HubSettings = {
   wasdEnabled: boolean;
   controls: ControlScheme;
   customControls: { up: string; left: string; down: string; right: string };
-  controlSize: number;
-  controlX: number;
-  controlY: number;
   fps: boolean;
   fpsCap: FpsCap;
   soundcloud: boolean;
@@ -485,8 +477,6 @@ const defaultSettings: HubSettings = {
   graphicsMode: "off",
   timerEnabled: true,
   timerStyle: "chrono",
-  timerScale: 100,
-  timerFont: "Rajdhani",
   autoBoostEnabled: false,
   autoBoostHotkey: "B",
   autoBoostCorner: "bottomLeft",
@@ -495,9 +485,6 @@ const defaultSettings: HubSettings = {
   wasdEnabled: true,
   controls: "WASD",
   customControls: { up: "T", left: "F", down: "G", right: "H" },
-  controlSize: 100,
-  controlX: 76,
-  controlY: 68,
   fps: false,
   fpsCap: "unlocked",
   soundcloud: false,
@@ -624,13 +611,8 @@ const uiCopy: Record<
     saturation: string;
     gameTimer: string;
     timerType: string;
-    timerSize: string;
-    timerFont: string;
     wasd: string;
     pcKeys: string;
-    wasdSize: string;
-    horizontal: string;
-    vertical: string;
     autoBoost: string;
     autoBoostHotkey: string;
     note: string;
@@ -699,13 +681,8 @@ const uiCopy: Record<
     saturation: "SATURAÇÃO",
     gameTimer: "CRONÔMETRO NO JOGO",
     timerType: "TIPO DE CRONÔMETRO",
-    timerSize: "TAMANHO DO CRONÔMETRO",
-    timerFont: "FONTE DO CRONÔMETRO",
     wasd: "WASD NA TELA · PC E CELULAR",
     pcKeys: "TECLAS NA TELA · APENAS PC",
-    wasdSize: "TAMANHO DO WASD",
-    horizontal: "POSIÇÃO HORIZONTAL",
-    vertical: "POSIÇÃO VERTICAL",
     autoBoost: "AUTOBOOST · 3 CLIQUES NO FOGUETE",
     autoBoostHotkey: "HOTKEY DO AUTOBOOST",
     note: "As configurações são aplicadas imediatamente e ficam salvas neste navegador.",
@@ -776,13 +753,8 @@ const uiCopy: Record<
     saturation: "SATURATION",
     gameTimer: "IN-GAME TIMER",
     timerType: "TIMER TYPE",
-    timerSize: "TIMER SIZE",
-    timerFont: "TIMER FONT",
     wasd: "WASD ON SCREEN · PC AND MOBILE",
     pcKeys: "ON-SCREEN KEYS · PC ONLY",
-    wasdSize: "WASD SIZE",
-    horizontal: "HORIZONTAL POSITION",
-    vertical: "VERTICAL POSITION",
     autoBoost: "AUTOBOOST · 3 ROCKET CLICKS",
     autoBoostHotkey: "AUTOBOOST HOTKEY",
     note: "Settings apply immediately and are saved in this browser.",
@@ -852,13 +824,8 @@ const uiCopy: Record<
     saturation: "SÄTTIGUNG",
     gameTimer: "SPIELTIMER",
     timerType: "TIMERTYP",
-    timerSize: "TIMERGRÖSSE",
-    timerFont: "TIMER-SCHRIFT",
     wasd: "WASD · PC UND MOBIL",
     pcKeys: "TASTEN · NUR PC",
-    wasdSize: "WASD-GRÖSSE",
-    horizontal: "HORIZONTALE POSITION",
-    vertical: "VERTIKALE POSITION",
     autoBoost: "AUTOBOOST · 3 ROCKET-KLICKS",
     autoBoostHotkey: "AUTOBOOST-HOTKEY",
     note: "Einstellungen werden sofort angewendet und im Browser gespeichert.",
@@ -929,13 +896,8 @@ const uiCopy: Record<
     saturation: "SATURATION",
     gameTimer: "CHRONOMÈTRE EN JEU",
     timerType: "TYPE DE CHRONOMÈTRE",
-    timerSize: "TAILLE DU CHRONOMÈTRE",
-    timerFont: "POLICE DU CHRONOMÈTRE",
     wasd: "WASD · PC ET MOBILE",
     pcKeys: "TOUCHES · PC UNIQUEMENT",
-    wasdSize: "TAILLE WASD",
-    horizontal: "POSITION HORIZONTALE",
-    vertical: "POSITION VERTICALE",
     autoBoost: "AUTOBOOST · 3 CLICS FUSÉE",
     autoBoostHotkey: "TOUCHE AUTOBOOST",
     note: "Les réglages sont appliqués immédiatement et sauvegardés dans ce navigateur.",
@@ -1006,13 +968,8 @@ const uiCopy: Record<
     saturation: "饱和度",
     gameTimer: "游戏计时器",
     timerType: "计时器类型",
-    timerSize: "计时器大小",
-    timerFont: "计时器字体",
     wasd: "屏幕 WASD · 电脑和手机",
     pcKeys: "屏幕按键 · 仅电脑",
-    wasdSize: "WASD 大小",
-    horizontal: "水平位置",
-    vertical: "垂直位置",
     autoBoost: "自动加速 · 火箭点击 3 次",
     autoBoostHotkey: "自动加速热键",
     note: "设置会立即应用并保存在此浏览器中。",
@@ -2898,38 +2855,6 @@ export default function MapHub() {
                     <option value="chrono">CHRONO 4.0</option>
                   </select>
                 </label>
-                {settings.timerStyle !== "livesplit" && (
-                  <>
-                    <label>
-                      <span>
-                        {copy.timerSize} <b>{settings.timerScale}%</b>
-                      </span>
-                      <input
-                        type="range"
-                        min="70"
-                        max="140"
-                        value={settings.timerScale}
-                        onChange={(e) =>
-                          updateSetting("timerScale", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>{copy.timerFont}</span>
-                      <select
-                        value={settings.timerFont}
-                        onChange={(e) =>
-                          updateSetting("timerFont", e.target.value)
-                        }
-                      >
-                        <option>Rajdhani</option>
-                        <option>Orbitron</option>
-                        <option>Montserrat</option>
-                        <option>monospace</option>
-                      </select>
-                    </label>
-                  </>
-                )}
                 <label>
                   <span>{copy.wasd}</span>
                   <input
@@ -2983,52 +2908,6 @@ export default function MapHub() {
                     </div>
                   )}
                 </label>
-                <label>
-                  <span>
-                    {copy.wasdSize} <b>{settings.controlSize}%</b>
-                  </span>
-                  <input
-                    type="range"
-                    min="70"
-                    max="150"
-                    value={settings.controlSize}
-                    onChange={(e) =>
-                      updateSetting("controlSize", Number(e.target.value))
-                    }
-                  />
-                </label>
-                {settings.timerStyle !== "livesplit" && (
-                  <>
-                    <label>
-                      <span>
-                        {copy.horizontal} <b>{settings.controlX}%</b>
-                      </span>
-                      <input
-                        type="range"
-                        min="5"
-                        max="90"
-                        value={settings.controlX}
-                        onChange={(e) =>
-                          updateSetting("controlX", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>
-                        {copy.vertical} <b>{settings.controlY}%</b>
-                      </span>
-                      <input
-                        type="range"
-                        min="5"
-                        max="90"
-                        value={settings.controlY}
-                        onChange={(e) =>
-                          updateSetting("controlY", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                  </>
-                )}
                 <label className="autoboost-setting">
                   <span>{copy.autoBoost}</span>
                   <input
