@@ -512,45 +512,6 @@ button {
 .loading-cancel:hover {
   color: var(--foreground);
 }
-.timer-magenta {
-  --timer-color: oklch(0.68 0.27 350);
-}
-.timer-red {
-  --timer-color: oklch(0.62 0.24 25);
-}
-.timer-lime {
-  --timer-color: oklch(0.86 0.22 135);
-}
-.timer-white {
-  --timer-color: oklch(0.97 0 0);
-}
-.timer-splits {
-  max-height: 132px;
-  overflow: auto;
-  border-top: 1px solid color-mix(in oklab, var(--timer-color) 20%, transparent);
-  padding: 0.2rem 0.55rem 0.45rem;
-  font-family: var(--font-ui);
-}
-.timer-split-row {
-  display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
-  align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.18rem 0.1rem;
-  color: color-mix(in oklab, var(--timer-color) 78%, white);
-  font-size: 0.62rem;
-}
-.timer-split-row span {
-  color: color-mix(in oklab, var(--timer-color) 55%, transparent);
-}
-.timer-split-row strong {
-  font: 600 0.7rem var(--font-ui);
-  color: var(--timer-color);
-}
-.timer-split-row small {
-  color: var(--muted-foreground);
-  font-size: 0.56rem;
-}
 .timer-palette {
   position: absolute;
   top: calc(100% + 6px);
