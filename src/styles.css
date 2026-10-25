@@ -4823,7 +4823,7 @@ button {
   border-radius: 6px;
   color: #fff;
 }
-.timer-actions button:nth-child(n+3) { display: none; }
+.timer-actions button:nth-child(3) { display: none; }
 
 .minimal-fps {
   padding: 4px 10px;
