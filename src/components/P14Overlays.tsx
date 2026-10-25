@@ -122,6 +122,7 @@ function OverlayWidget({
   const resize = useRef<{ pointerId: number; x: number; y: number; scale: number } | null>(null);
   const hold = useRef<number | null>(null);
   const moved = useRef(false);
+  const suppressClick = useRef(false);
 
   const dragStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -161,6 +162,7 @@ function OverlayWidget({
     if (hold.current != null) window.clearTimeout(hold.current);
     hold.current = window.setTimeout(() => {
       moved.current = true;
+      suppressClick.current = true;
       setSettingsOpen(true);
       longPress();
     }, 2000);
@@ -207,7 +209,7 @@ function OverlayWidget({
           <Settings aria-hidden="true" />
         </button>
       </div>
-      <div className="p14-widget-content" onPointerDown={contentDown} onPointerUp={contentUp} onPointerCancel={contentUp}>
+      <div className="p14-widget-content" onPointerDown={contentDown} onPointerUp={contentUp} onPointerCancel={contentUp} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
         {children}
       </div>
       {(["nw", "ne", "sw", "se"] as const).map((corner) => (
@@ -325,6 +327,8 @@ export default function P14Overlays(props: P14OverlaysProps) {
     let frames = 0;
     let start = performance.now();
     let raf = 0;
+    let timeout = 0;
+    const cap = props.fpsCap === "unlocked" ? 0 : 1000 / Number(props.fpsCap);
     const measure = (now: number) => {
       frames++;
       if (now - start >= 1000) {
@@ -332,11 +336,12 @@ export default function P14Overlays(props: P14OverlaysProps) {
         frames = 0;
         start = now;
       }
-      raf = requestAnimationFrame(measure);
+      if (cap) timeout = window.setTimeout(() => { raf = requestAnimationFrame(measure); }, cap);
+      else raf = requestAnimationFrame(measure);
     };
     raf = requestAnimationFrame(measure);
-    return () => cancelAnimationFrame(raf);
-  }, [props.fpsEnabled]);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timeout); };
+  }, [props.fpsEnabled, props.fpsCap]);
 
   useEffect(() => () => {
     if (tapTimer.current != null) window.clearTimeout(tapTimer.current);
@@ -379,12 +384,12 @@ export default function P14Overlays(props: P14OverlaysProps) {
       )}
       {mode === "chrono" && (
         <div className="p14-chrono-cells" onClick={timerTap} onDoubleClick={(event) => { event.preventDefault(); }}>
-          {(formatted as string[]).map((part, index) => <span className="p14-chrono-cell" key={index}>{part}</span>)}
+          {(formatted as unknown as string[]).map((part, index) => <span className="p14-chrono-cell" key={index}>{part}</span>)}
         </div>
       )}
       {mode === "livesplit" && (
         <div className="p14-livesplit" onClick={timerTap}>
-          <div className="p14-live-time"><span>{(formatted as readonly string[])[0]}</span><small>{(formatted as readonly string[])[1]}</small></div>
+          <div className="p14-live-time"><span>{(formatted as unknown as readonly string[])[0]}</span><small>{(formatted as unknown as readonly string[])[1]}</small></div>
           {splits.length > 0 && <div className="p14-splits">{splits.map((value, index) => <div key={index}><span>#{index + 1}</span><b>{formatTime(value, "chrono").join(":")}</b></div>)}</div>}
         </div>
       )}
