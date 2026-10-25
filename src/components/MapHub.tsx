@@ -376,8 +376,6 @@ const themeBackdropImages: Record<Theme, string> = {
   jujutsu: "/manus-storage/jujutsu-energy_32d92998.png",
 };
 
-const timerColors = ["cyan", "magenta", "red", "lime", "white"] as const;
-type TimerColor = (typeof timerColors)[number];
 type ControlScheme = "WASD" | "IJKL" | "SETAS" | "PERSONALIZADO";
 type Language = "pt-BR" | "en" | "de" | "fr" | "zh";
 type BetaFilter = "all" | "surfers" | "other";
