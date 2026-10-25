@@ -377,29 +377,17 @@
         trySave();
       }
 
-      (function installZurichRuntimeBridge() {
-        var storageKey = 'surfvt14ZurichThreeTouchHoverboard';
-        var enabled = false;
-        try { enabled = window.localStorage.getItem(storageKey) === 'true'; } catch (e) {}
-        function setEnabled(value) {
-          enabled = !!value;
-          window.__surfVT14TripleTap = enabled;
-          window.__surfVT14ZurichTripleTap = enabled;
-          try { window.localStorage.setItem(storageKey, enabled ? 'true' : 'false'); } catch (e) {}
-        }
-        window.SurfVT14BoardTripleTap = {
-          isEnabled: function () { return enabled; },
-          setEnabled: setEnabled,
-          getStatus: function () { return { enabled: enabled, taps: 3 }; }
-        };
-        setEnabled(enabled);
+      (function installHubRuntimeBridge() {
         function applyHubSaturation(level) {
           var value = level === 'off' ? 1 : level === 'low' ? 1.25 : level === 'medium' ? 1.5 : 1.9;
           var target = document.getElementById('game') || document.body;
           target.style.filter = 'saturate(' + value + ')';
           target.setAttribute('data-surfvt14-saturation', String(level || 'off'));
         }
-        try { var savedHub = JSON.parse(window.localStorage.getItem('surfvt14-settings') || '{}'); applyHubSaturation(savedHub.saturation || 'off'); } catch (e) { applyHubSaturation('off'); }
+        try {
+          var savedHub = JSON.parse(window.localStorage.getItem('surfvt14-settings') || '{}');
+          applyHubSaturation(savedHub.saturation || 'off');
+        } catch (e) { applyHubSaturation('off'); }
         window.addEventListener('message', function (event) {
           if (event.data && event.data.type === 'SURFVT14_HUB_SETTINGS') {
             var settings = event.data.settings || {};
@@ -407,10 +395,12 @@
           }
         });
         function requestStorage() {
-          try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch(e){}
-          try { if (typeof window.applyInfiniteSave === 'function') window.applyInfiniteSave(); } catch(e){}
+          try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch (e) {}
+          try { if (typeof window.applyInfiniteSave === 'function') window.applyInfiniteSave(); } catch (e) {}
         }
-        ['pointerdown','touchstart','click','keydown'].forEach(function(type){ window.addEventListener(type, requestStorage, {capture:true, passive:true}); });
+        ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(function (type) {
+          window.addEventListener(type, requestStorage, { capture: true, passive: true });
+        });
       })();
       (function installCompatibilityLayer() {
         var info = webglReport();
