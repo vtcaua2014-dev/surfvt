@@ -30,6 +30,7 @@ import nightCity from "@/assets/night-city-lobby.jpg";
 import newYork from "@/assets/new-york-lobby.jpg";
 import { Button } from "@/components/ui/button";
 import SurfVtBetaHub from "@/components/SurfVtBetaHub";
+import P14Overlays from "@/components/P14Overlays";
 
 type MapId =
   | "moggers"
@@ -1074,247 +1075,6 @@ const p14BackupCopy: Record<
   },
 };
 
-function useTimerSettingsHold(running: boolean) {
-  const hold = useRef<number | null>(null);
-  const fired = useRef(false);
-  const clear = useCallback(() => {
-    if (hold.current != null) window.clearTimeout(hold.current);
-    hold.current = null;
-  }, []);
-  useEffect(() => clear, [clear]);
-  return {
-    onPointerDownCapture: () => {
-      fired.current = false;
-      clear();
-      if (running) hold.current = window.setTimeout(() => {
-        fired.current = true;
-        window.dispatchEvent(new Event("SURFVT14_OPEN_TIMER_SETTINGS"));
-      }, 2000);
-    },
-    onPointerUpCapture: clear,
-    onPointerCancelCapture: clear,
-    onClickCapture: (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!fired.current) return;
-      event.preventDefault();
-      event.stopPropagation();
-      fired.current = false;
-    },
-  };
-}
-
-function FloatingTimer({ settings }: { settings: HubSettings }) {
-  const [elapsed, setElapsed] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [splits, setSplits] = useState<Array<{ total: number; lap: number }>>(
-    [],
-  );
-  const [color, setColor] = useState<TimerColor>("cyan");
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 18, y: 76 });
-  const startAt = useRef(0);
-  const elapsedAtStart = useRef(0);
-  const lastSplitAt = useRef(0);
-  const drag = useRef<{
-    pointerId: number;
-    x: number;
-    y: number;
-    left: number;
-    top: number;
-  } | null>(null);
-  const settingsHold = useTimerSettingsHold(running);
-
-  const toggle = useCallback(() => {
-    setRunning((current) => {
-      if (current) {
-        setElapsed(Date.now() - startAt.current + elapsedAtStart.current);
-      } else {
-        elapsedAtStart.current = elapsed;
-        startAt.current = Date.now();
-      }
-      return !current;
-    });
-  }, [elapsed]);
-
-  const reset = useCallback(() => {
-    setRunning(false);
-    setElapsed(0);
-    setSplits([]);
-    elapsedAtStart.current = 0;
-    lastSplitAt.current = 0;
-  }, []);
-
-  const split = useCallback(() => {
-    const current = running
-      ? Date.now() - startAt.current + elapsedAtStart.current
-      : elapsed;
-    setElapsed(current);
-    setSplits((items) =>
-      [{ total: current, lap: current - lastSplitAt.current }, ...items].slice(
-        0,
-        8,
-      ),
-    );
-    lastSplitAt.current = current;
-  }, [elapsed, running]);
-
-  useEffect(() => {
-    if (!running) return;
-    const update = () =>
-      setElapsed(Date.now() - startAt.current + elapsedAtStart.current);
-    const interval = window.setInterval(update, 31);
-    return () => window.clearInterval(interval);
-  }, [running]);
-
-  useEffect(() => {
-    const onTimerToggle = () => toggle();
-    const onTimerReset = () => reset();
-    const onTimerSplit = () => split();
-    window.addEventListener("SURFVT14_TIMER_TOGGLE", onTimerToggle);
-    window.addEventListener("SURFVT14_TIMER_RESET", onTimerReset);
-    window.addEventListener("SURFVT14_TIMER_SPLIT", onTimerSplit);
-    return () => {
-      window.removeEventListener("SURFVT14_TIMER_TOGGLE", onTimerToggle);
-      window.removeEventListener("SURFVT14_TIMER_RESET", onTimerReset);
-      window.removeEventListener("SURFVT14_TIMER_SPLIT", onTimerSplit);
-    };
-  }, [reset, split, toggle]);
-
-  const handleTap = () => toggle();
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    const target = event.currentTarget;
-    target.setPointerCapture(event.pointerId);
-    drag.current = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      left: position.x,
-      top: position.y,
-    };
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!drag.current || drag.current.pointerId !== event.pointerId) return;
-    const width = 238;
-    const height = 88;
-    setPosition({
-      x: Math.max(
-        8,
-        Math.min(
-          window.innerWidth - width - 8,
-          drag.current.left + event.clientX - drag.current.x,
-        ),
-      ),
-      y: Math.max(
-        56,
-        Math.min(
-          window.innerHeight - height - 8,
-          drag.current.top + event.clientY - drag.current.y,
-        ),
-      ),
-    });
-  };
-
-  return (
-    <div
-      className={`floating-timer timer-${color} ${settings.timerEnabled ? "" : "timer-disabled"}`}
-      style={{
-        transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${settings.timerScale / 100})`,
-        transformOrigin: "top left",
-        fontFamily: settings.timerFont,
-      }}
-      aria-label="Cronômetro flutuante"
-      {...settingsHold}
-    >
-      <div
-        className="timer-drag"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={() => {
-          drag.current = null;
-        }}
-        title="Arraste para mover"
-      >
-        <GripHorizontal aria-hidden="true" />
-        <span>Floating Clock</span>
-        <span className={`timer-status ${running ? "is-running" : ""}`} />
-      </div>
-      <button
-        className="timer-face"
-        type="button"
-        onClick={handleTap}
-        aria-label={running ? "Pausar cronômetro" : "Iniciar cronômetro"}
-      >
-        {formatTime(elapsed)}
-      </button>
-      <div className="timer-actions">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggle}
-          aria-label={running ? "Pausar" : "Iniciar"}
-          title="Q · iniciar ou pausar"
-        >
-          {running ? <Pause /> : <Play />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={reset}
-          aria-label="Reiniciar"
-          title="R · reiniciar"
-        >
-          <RotateCcw />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={split}
-          aria-label="Criar split"
-          title="E · split"
-        >
-          <Flag />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setPaletteOpen((open) => !open)}
-          aria-label="Mudar cor"
-        >
-          <Palette />
-        </Button>
-      </div>
-      {splits.length > 0 && (
-        <div className="timer-splits" aria-label="Lista de splits">
-          {splits.map((item, index) => (
-            <div className="timer-split-row" key={`${item.total}-${index}`}>
-              <span>#{splits.length - index}</span>
-              <strong>{formatTime(item.lap)}</strong>
-              <small>{formatTime(item.total)}</small>
-            </div>
-          ))}
-        </div>
-      )}
-      {paletteOpen && (
-        <div className="timer-palette" aria-label="Cores do cronômetro">
-          {timerColors.map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={`timer-swatch swatch-${option} ${option === color ? "is-selected" : ""}`}
-              onClick={() => {
-                setColor(option);
-                setPaletteOpen(false);
-              }}
-              aria-label={`Cor ${option}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function saturationValue(level: HubSettings["saturation"]) {
   return level === "off"
     ? 1
@@ -1325,161 +1085,6 @@ function saturationValue(level: HubSettings["saturation"]) {
         : 1.9;
 }
 
-function ChronoTimer({ settings }: { settings: HubSettings }) {
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const settingsHold = useTimerSettingsHold(running);
-  const tapTimer = useRef<number | null>(null);
-  const startedAt = useRef<number | null>(null);
-  const baseElapsed = useRef(0);
-  const elapsedRef = useRef(0);
-  useEffect(() => {
-    if (!running) return;
-    const tick = window.setInterval(() => {
-      if (startedAt.current != null) {
-        const next = baseElapsed.current + Date.now() - startedAt.current;
-        elapsedRef.current = next;
-        setElapsed(next);
-      }
-    }, 47);
-    return () => window.clearInterval(tick);
-  }, [running]);
-  useEffect(() => {
-    const toggleFromHub = () =>
-      setRunning((current) => {
-        if (current) {
-          baseElapsed.current = elapsedRef.current;
-          startedAt.current = null;
-        } else {
-          baseElapsed.current = elapsedRef.current;
-          startedAt.current = Date.now();
-        }
-        return !current;
-      });
-    const resetFromHub = () => {
-      startedAt.current = null;
-      baseElapsed.current = 0;
-      elapsedRef.current = 0;
-      setElapsed(0);
-      setRunning(false);
-    };
-    const onGameEvent = (event: Event) => {
-      const type = String(
-        (event as CustomEvent<{ type?: string }>).detail?.type || "",
-      );
-      if (
-        type === "poki:gameplayStart" ||
-        type === "poki:roundStart" ||
-        type === "reborn:runStarted"
-      ) {
-        startedAt.current = Date.now();
-        setRunning(true);
-      } else if (
-        type === "poki:roundEnd" ||
-        type === "reborn:playerDied" ||
-        type === "reborn:gameEnded"
-      ) {
-        setRunning(false);
-        baseElapsed.current = elapsedRef.current;
-      }
-    };
-    window.addEventListener("SURFVT14_TIMER_TOGGLE", toggleFromHub);
-    window.addEventListener("SURFVT14_TIMER_RESET", resetFromHub);
-    window.addEventListener("tro:unity-runtime-event", onGameEvent);
-    return () => {
-      window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggleFromHub);
-      window.removeEventListener("SURFVT14_TIMER_RESET", resetFromHub);
-      window.removeEventListener("tro:unity-runtime-event", onGameEvent);
-    };
-  }, []);
-  const toggle = () => {
-    if (running) {
-      baseElapsed.current = elapsedRef.current;
-      startedAt.current = null;
-      setRunning(false);
-    } else {
-      startedAt.current = Date.now();
-      setRunning(true);
-    }
-  };
-  const reset = () => {
-    startedAt.current = null;
-    baseElapsed.current = 0;
-    elapsedRef.current = 0;
-    setElapsed(0);
-    setRunning(false);
-  };
-  const handleTimerTap = () => {
-    if (tapTimer.current != null) {
-      window.clearTimeout(tapTimer.current);
-      tapTimer.current = null;
-      reset();
-      return;
-    }
-    tapTimer.current = window.setTimeout(() => {
-      tapTimer.current = null;
-      toggle();
-    }, 260);
-  };
-  useEffect(() => () => {
-    if (tapTimer.current != null) window.clearTimeout(tapTimer.current);
-  }, []);
-  const [hours, minutes, seconds] = formatTime(elapsed).split(/[.:]/);
-  return (
-    <div
-      className={"chrono-port " + (running ? "is-running" : elapsed > 0 ? "is-paused" : "")}
-      style={{ transform: "scale(" + settings.timerScale / 100 + ")", transformOrigin: "top left", fontFamily: settings.timerFont }}
-      aria-label="Cronômetro Chrono"
-      {...settingsHold}
-      onClick={(event) => {
-        if ((event.target as HTMLElement).closest("button")) return;
-        handleTimerTap();
-      }}
-    >
-      <div className="chrono-ext-cells" aria-label="Toque para iniciar ou pausar; toque duplo para reiniciar">
-        <span className="chrono-ext-cell">{hours}</span>
-        <span className="chrono-ext-cell">{minutes}</span>
-        <span className="chrono-ext-cell">{seconds}</span>
-      </div>
-    </div>
-  );
-}
-
-function LiveSplitTimer({ enabled }: { enabled: boolean }) {
-  useEffect(() => {
-    if (!enabled) return;
-    const frame = document.querySelector<HTMLIFrameElement>(".game-frame");
-    if (!frame) return;
-    let injectedScript: HTMLScriptElement | null = null;
-    const injectIntoGameFrame = () => {
-      const gameDocument = frame.contentDocument;
-      if (
-        !gameDocument ||
-        gameDocument.querySelector("script[data-surfvt14-livesplit]")
-      )
-        return;
-      injectedScript = gameDocument.createElement("script");
-      injectedScript.src = "/chronometers/livesplit-timer.js";
-      injectedScript.async = true;
-      injectedScript.dataset.surfvt14Livesplit = "true";
-      (gameDocument.head || gameDocument.documentElement).appendChild(
-        injectedScript,
-      );
-    };
-    frame.addEventListener("load", injectIntoGameFrame);
-    injectIntoGameFrame();
-    return () => {
-      frame.removeEventListener("load", injectIntoGameFrame);
-      injectedScript?.remove();
-      frame.contentDocument?.getElementById("chrono")?.remove();
-      frame.contentDocument?.getElementById("chronoSettingsPopup")?.remove();
-      frame.contentDocument
-        ?.getElementById("surfvt14-livesplit-style")
-        ?.remove();
-    };
-  }, [enabled]);
-  return null;
-}
 type GamePlayerProps = {
   map: MapId;
   mapPath: string;
@@ -1516,7 +1121,6 @@ function GamePlayer({
   const soundcloudRef = useRef<HTMLIFrameElement>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [frameFps, setFrameFps] = useState(0);
   const [soundcloudPosition, setSoundcloudPosition] = useState(0);
   const activeControlKey = useRef<string | null>(null);
   const lastControlPress = useRef<{ key: string; at: number }>({
@@ -1621,36 +1225,7 @@ function GamePlayer({
         !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent),
     );
   }, []);
-  useEffect(() => {
-    if (!settings.fps) {
-      setFrameFps(0);
-      return;
-    }
-    let frames = 0;
-    let last = performance.now();
-    let raf = 0;
-    let timeout = 0;
-    const step = (now: number) => {
-      frames += 1;
-      if (now - last >= 1000) {
-        setFrameFps(frames);
-        frames = 0;
-        last = now;
-      }
-      const cap =
-        settings.fpsCap === "unlocked" ? 0 : 1000 / Number(settings.fpsCap);
-      if (cap)
-        timeout = window.setTimeout(() => {
-          raf = requestAnimationFrame(step);
-        }, cap);
-      else raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(timeout);
-    };
-  }, [settings.fps, settings.fpsCap]);
+
 
   useEffect(() => {
     const normalizeKey = (value: string) => {
@@ -2160,79 +1735,6 @@ function GamePlayer({
           )}
         </div>
       )}
-      {isVisible && settings.wasdEnabled && !downloadOnly && (
-        <div
-          className={`on-screen-controls ${isDesktop ? "on-screen-controls-desktop" : "on-screen-controls-mobile"}`}
-          style={
-            {
-              "--controls-scale": settings.controlSize / 100,
-              "--controls-x": `${settings.controlX}%`,
-              "--controls-y": `${settings.controlY}%`,
-            } as React.CSSProperties
-          }
-          aria-label={`Controles ${settings.controls}`}
-        >
-          <span className="on-screen-controls-label">
-            {isDesktop ? `${settings.controls} · PC` : "SETAS · TOQUE"}
-          </span>
-          <div className="control-keyboard">
-            <span className="control-spacer" aria-hidden="true" />
-            {displayControlKeys.map((key, index) => {
-              const slot =
-                index === 0
-                  ? "control-up"
-                  : index === 1
-                    ? "control-left"
-                    : index === 2
-                      ? "control-down"
-                      : "control-right";
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`${slot} ${pressedKey === key || pressedKey === key.toLowerCase() ? "is-pressed" : ""}`}
-                  onPointerDown={(event) => pressControlDown(key, event)}
-                  onPointerUp={() => releaseControlKey(key)}
-                  onPointerCancel={() => releaseControlKey(key)}
-                  onPointerLeave={() => releaseControlKey(key)}
-                  onTouchStart={(event) => {
-                    if (typeof PointerEvent !== "undefined") return;
-                    event.preventDefault();
-                    pressControlKey(key);
-                  }}
-                  onTouchEnd={(event) => {
-                    if (typeof PointerEvent !== "undefined") return;
-                    event.preventDefault();
-                    releaseControlKey(key);
-                  }}
-                  onContextMenu={(event) => event.preventDefault()}
-                >
-                  {key}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {isVisible && settings.autoBoostEnabled && !downloadOnly && !isDesktop && (
-        <button
-          type="button"
-          className="autoboost-in-game"
-          onClick={triggerAutoBoost}
-          aria-label="Ativar AutoBoost"
-          title="AutoBoost"
-        >
-          <Zap aria-hidden="true" /> BOOST
-        </button>
-      )}
-      {isVisible && settings.fps && (
-        <div
-          className="minimal-fps"
-          title={`Limite: ${settings.fpsCap === "unlocked" ? "desbloqueado" : `${settings.fpsCap} FPS`}`}
-        >
-          {frameFps} FPS
-        </div>
-      )}
       {isVisible && settings.soundcloud && (
         <div className="soundcloud-in-game">
           <div className="soundcloud-controls">
@@ -2279,16 +1781,22 @@ function GamePlayer({
           />
         </div>
       )}
-      {isVisible &&
-        timerCompatible &&
-        settings.timerEnabled &&
-        (settings.timerStyle === "livesplit" ? (
-          <LiveSplitTimer enabled />
-        ) : settings.timerStyle === "chrono" ? (
-          <ChronoTimer settings={settings} />
-        ) : (
-          <FloatingTimer settings={settings} />
-        ))}
+      {isVisible && !downloadOnly && (
+        <P14Overlays
+          timerEnabled={settings.timerEnabled}
+          timerStyle={settings.timerStyle}
+          timerCompatible={timerCompatible}
+          fpsEnabled={settings.fps}
+          fpsCap={settings.fpsCap}
+          wasdEnabled={settings.wasdEnabled}
+          controlKeys={displayControlKeys}
+          pressedKey={pressedKey}
+          isDesktop={isDesktop}
+          autoBoostEnabled={settings.autoBoostEnabled && map !== "moggers"}
+          onAutoBoost={triggerAutoBoost}
+          onControlPress={(key, down) => down ? pressControlKey(key) : releaseControlKey(key)}
+        />
+      )}
     </div>
   );
 }
