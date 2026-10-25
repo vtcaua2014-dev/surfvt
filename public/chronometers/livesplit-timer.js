@@ -24,7 +24,7 @@
   const DEFAULTS = {
     left: 12,
     top: 12,
-    width: 234,
+    width: 260,
     height: 54,
     bgColor: '#000000',
     runningColor: '#29cc54',
@@ -73,15 +73,15 @@
     #chrono {
       position: fixed;
       z-index: 2147483640;
-      width: var(--chrono-width, 380px);
-      height: var(--chrono-height, 72px);
+      width: var(--chrono-width, 260px);
+      height: var(--chrono-height, 54px);
       box-sizing: border-box;
-      padding: 0 14px;
+      padding: 5px 9px 6px;
       margin: 0;
       border: 0;
       border-radius: 0 !important;
       background: var(--chrono-bg, #000);
-      box-shadow: 0 4px 14px rgba(0,0,0,.28);
+      box-shadow: none;
       isolation: isolate;
       overflow: hidden;
       user-select: none;
@@ -133,8 +133,8 @@
       -webkit-text-fill-color: transparent;
     }
 
-    #chrono .chrono-main { font-size: 56px !important; }
-    #chrono .chrono-fraction { font-size: 31px !important; margin-left: 1px; opacity: .96; }
+    #chrono .chrono-main { font-size: 44px !important; }
+    #chrono .chrono-fraction { font-size: 25px !important; margin-left: 1px; opacity: .96; }
 
     #chronoSettingsPopup {
       position: fixed;
