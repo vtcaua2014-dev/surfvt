@@ -88,9 +88,7 @@ function OverlaySettings({
     <div className="p14-settings-panel" onPointerDown={(event) => event.stopPropagation()}>
       <strong>{id === "wasd" ? "HOTKEYS" : id === "fps" ? "FPS" : "CRONÔMETRO"}</strong>
       <label>Cor<input type="color" value={prefs.color} onChange={(event) => update({ color: event.target.value })} /></label>
-      {true && (
-        <label>Fundo<input type="color" value={prefs.background.startsWith("#") ? prefs.background : "#000000"} onChange={(event) => update({ background: event.target.value })} /></label>
-      )}
+      <label>Fundo<input type="color" value={prefs.background.startsWith("#") ? prefs.background : "#000000"} onChange={(event) => update({ background: event.target.value })} /></label>
       <label>Fonte
         <select value={prefs.font} onChange={(event) => update({ font: event.target.value })}>
           {FONTS.map((font) => <option key={font} value={font}>{font}</option>)}
