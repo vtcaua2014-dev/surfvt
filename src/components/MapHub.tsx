@@ -3114,6 +3114,7 @@ export default function MapHub() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setSettingsOpen(false)}
+                  aria-label={copy.close}
                 >
                   <X />
                 </Button>
@@ -3594,19 +3595,19 @@ export default function MapHub() {
         )}
         {isLoadingGame && (
           <div className="loading-screen" role="status" aria-live="polite">
+            <aside className="loading-utility-rail" aria-label="SURFVT14">
+              <span className="loading-utility-brand">SURFVT14</span>
+              <button
+                className="loading-exit-button"
+                type="button"
+                onClick={handleClose}
+                aria-label={copy.close}
+              >
+                <X size={17} aria-hidden="true" />
+                <span>{copy.close}</span>
+              </button>
+            </aside>
             <div className="loading-panel reference-loader">
-              <div className="loading-topbar">
-                <span className="loading-dot" />
-                <span>{launchedMap.toUpperCase()} / SURFVT14</span>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  aria-label={copy.close}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="loading-yellow-rule" />
               <div className="loading-reference-body">
                 <span className="loading-kicker">SUBWAY SURFERS · WEBGL 2</span>
                 <h2>{launchedMap.toUpperCase()}</h2>
@@ -3615,10 +3616,6 @@ export default function MapHub() {
                   <div style={{ width: `${progressPercent}%` }} />
                 </div>
                 <div className="reference-percent">{progressPercent}%</div>
-                <small>
-                  BUILD LOCAL · SURFVT14 · arquivos ficam no cache após o
-                  primeiro download
-                </small>
               </div>
             </div>
           </div>

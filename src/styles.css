@@ -4325,3 +4325,413 @@ button {
     var(--beta-primary)
   ) !important;
 }
+
+/* Beta-inspired settings surface, shared by Alpha and Beta. */
+.hub-settings-backdrop {
+  background: rgba(3, 5, 10, 0.84);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.hub-settings-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: min(980px, 100%);
+  max-height: min(92dvh, 900px);
+  border: 1px solid color-mix(in oklab, var(--hub-blue) 45%, var(--border));
+  border-radius: 1.35rem;
+  padding: clamp(1rem, 2.7vw, 1.7rem);
+  background:
+    radial-gradient(
+      ellipse at 92% 0%,
+      color-mix(in oklab, var(--hub-blue) 12%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(155deg, #111722 0%, #0a0d14 58%, #080a10 100%);
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.62),
+    0 0 38px color-mix(in oklab, var(--hub-blue) 10%, transparent);
+  scrollbar-color: color-mix(in oklab, var(--hub-blue) 55%, #27303e) #0a0d14;
+}
+
+.hub-settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 1rem;
+  margin: -0.25rem -0.25rem 0;
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--hub-blue) 28%, var(--border));
+  padding: 0.2rem 0.25rem 1rem;
+  background: linear-gradient(180deg, #111722 78%, rgba(17, 23, 34, 0.92));
+}
+
+.hub-settings-header > div > span {
+  color: var(--hub-yellow);
+  letter-spacing: 0.2em;
+}
+
+.hub-settings-header h2 {
+  color: #f5f7fb;
+  letter-spacing: 0.04em;
+}
+
+.hub-settings-header > button {
+  border: 1px solid color-mix(in oklab, var(--hub-blue) 42%, var(--border));
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.035);
+  color: #f5f7fb;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.hub-settings-header > button:hover {
+  transform: translateY(-1px);
+  border-color: var(--hub-yellow);
+  background: color-mix(in oklab, var(--hub-yellow) 10%, transparent);
+}
+
+.profile-settings,
+.profile-auth,
+.theme-settings,
+.hub-settings-grid {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.profile-settings,
+.profile-auth {
+  align-self: stretch;
+  padding: 1rem;
+}
+
+.profile-settings {
+  border-color: color-mix(
+    in oklab,
+    var(--hub-blue) 35%,
+    rgba(255, 255, 255, 0.09)
+  );
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--hub-blue) 8%, #10151f),
+    rgba(255, 255, 255, 0.025)
+  );
+}
+
+.profile-auth {
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  padding-top: 1rem;
+}
+
+.profile-settings-heading > svg,
+.profile-stats svg {
+  color: var(--hub-blue);
+}
+
+.profile-settings-heading span,
+.profile-auth-heading span,
+.theme-settings-heading span {
+  color: var(--hub-yellow);
+}
+
+.profile-stats > div {
+  border-color: rgba(255, 255, 255, 0.09);
+  border-radius: 0.75rem;
+  background: rgba(5, 8, 13, 0.44);
+}
+
+.profile-name-field input,
+.hub-settings-grid select,
+.hub-settings-grid input[type="text"],
+.hub-settings-grid input:not([type]) {
+  border-color: rgba(255, 255, 255, 0.13);
+  border-radius: 0.55rem;
+  background: #0a0e15;
+  color: #f5f7fb;
+}
+
+.profile-auth-heading small,
+.profile-settings-heading strong,
+.profile-stats span {
+  color: #9ba7b8;
+}
+
+.profile-auth-actions {
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.auth-provider {
+  min-height: 3.5rem;
+  border-color: rgba(255, 255, 255, 0.11);
+  border-radius: 0.8rem;
+  background: rgba(5, 8, 13, 0.48);
+}
+
+.auth-provider:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--hub-blue) 65%, white);
+}
+
+.theme-settings {
+  grid-column: 1 / -1;
+  padding: 1rem;
+}
+
+.theme-settings-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.theme-settings-option {
+  min-height: 2.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #e7edf6;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.theme-settings-option[aria-pressed="true"] {
+  border-color: var(--hub-yellow);
+  background: color-mix(in oklab, var(--hub-yellow) 13%, #10151f);
+  color: #fff;
+  box-shadow: 0 0 18px color-mix(in oklab, var(--hub-yellow) 12%, transparent);
+}
+
+.hub-settings-grid {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0;
+  padding: 1rem;
+}
+
+.hub-settings-grid label {
+  min-width: 0;
+  min-height: 3.75rem;
+  border-color: rgba(255, 255, 255, 0.085);
+  border-radius: 0.8rem;
+  background: rgba(5, 8, 13, 0.42);
+  padding: 0.75rem 0.85rem;
+  color: #e8edf5;
+}
+
+.hub-settings-grid label span {
+  color: #d8e0eb;
+  font-size: 0.67rem;
+  letter-spacing: 0.045em;
+}
+
+.hub-settings-grid label b {
+  color: var(--hub-yellow);
+}
+
+.hub-settings-grid input[type="checkbox"],
+.hub-settings-grid input[type="range"] {
+  accent-color: var(--hub-blue);
+}
+
+.hub-settings-grid select:focus-visible,
+.hub-settings-grid input:focus-visible,
+.profile-name-field input:focus-visible,
+.auth-provider:focus-visible,
+.hub-settings-header button:focus-visible,
+.theme-settings-option:focus-visible {
+  outline: 2px solid var(--hub-yellow);
+  outline-offset: 2px;
+}
+
+.hub-settings-grid .wide-setting {
+  grid-column: 1 / -1;
+}
+
+.hub-settings-note,
+.fps-badge,
+.soundcloud-player {
+  grid-column: 1 / -1;
+}
+
+.hub-settings-note {
+  margin: 0;
+  padding: 0.25rem 0.15rem;
+  color: #9ba7b8;
+}
+
+.hub-settings-note svg {
+  color: var(--hub-blue);
+}
+
+.fps-badge {
+  justify-self: start;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.soundcloud-player {
+  width: 100%;
+  min-height: 166px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.8rem;
+}
+
+/* Shared build loader: keep the progress centered and brand/exit compact on the right. */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  overflow: hidden;
+}
+
+.loading-panel.reference-loader {
+  height: 100%;
+}
+
+.loading-reference-body {
+  min-height: 100dvh;
+  padding: 2rem clamp(1.25rem, 4vw, 4rem);
+}
+
+.loading-utility-rail {
+  position: absolute;
+  top: 50%;
+  right: clamp(1rem, 3vw, 2.75rem);
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  width: 8.25rem;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 1rem;
+  padding: 1rem 0.65rem;
+  background: rgba(13, 17, 25, 0.86);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(14px);
+}
+
+.loading-utility-brand {
+  color: #f4f6f9;
+  font: 700 0.68rem var(--font-ui);
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+
+.loading-exit-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border: 1px solid
+    color-mix(in oklab, var(--hub-blue) 55%, rgba(255, 255, 255, 0.15));
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.045);
+  color: #e7edf6;
+  cursor: pointer;
+  font: 700 0.63rem var(--font-ui);
+  letter-spacing: 0.12em;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.loading-exit-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--hub-yellow);
+  background: color-mix(in oklab, var(--hub-yellow) 12%, transparent);
+  color: #fff;
+}
+
+.loading-exit-button:focus-visible {
+  outline: 2px solid var(--hub-yellow);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .hub-settings-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    max-height: min(94dvh, 900px);
+    border-radius: 1rem;
+  }
+
+  .hub-settings-header,
+  .profile-settings,
+  .profile-auth,
+  .theme-settings,
+  .hub-settings-grid,
+  .hub-settings-note,
+  .fps-badge,
+  .soundcloud-player {
+    grid-column: 1;
+  }
+
+  .profile-settings,
+  .profile-auth,
+  .theme-settings,
+  .hub-settings-grid {
+    padding: 0.85rem;
+  }
+
+  .loading-utility-rail {
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: max(0.75rem, env(safe-area-inset-right));
+    display: flex;
+    width: auto;
+    align-items: center;
+    gap: 0.55rem;
+    transform: none;
+    border-radius: 999px;
+    padding: 0.42rem 0.5rem 0.42rem 0.75rem;
+  }
+
+  .loading-exit-button {
+    width: auto;
+    min-height: 2rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .loading-reference-body {
+    padding: 5rem 1.25rem 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-settings-grid .wide-setting {
+    grid-column: 1;
+  }
+
+  .profile-auth-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .loading-kicker {
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+  }
+
+  .loading-reference-body h2 {
+    font-size: clamp(2.8rem, 17vw, 4.5rem);
+  }
+}
