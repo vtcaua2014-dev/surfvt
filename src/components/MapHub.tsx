@@ -2126,24 +2126,17 @@ function GamePlayer({
                 onProgress(1);
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
-                if (gameDocument) {
-                  const scriptSelector =
-                    map === "zurich"
-                      ? "script[data-surfvt14-zurich-settings]"
-                      : "script[data-surfvt14-enhanced]";
-                  if (!gameDocument.querySelector(scriptSelector)) {
-                    const settingsScript = gameDocument.createElement("script");
-                    if (map === "zurich") {
-                      settingsScript.src = "/chronometers/zurich-three-touch.js";
-                      settingsScript.dataset.surfvt14ZurichSettings = "true";
-                    } else {
-                      settingsScript.src = "/chronometers/enhanced-controls.js";
-                      settingsScript.dataset.surfvt14Enhanced = "true";
-                    }
-                    (gameDocument.head || gameDocument.documentElement).appendChild(
-                      settingsScript,
-                    );
-                  }
+                if (
+                  map !== "zurich" &&
+                  gameDocument &&
+                  !gameDocument.querySelector("script[data-surfvt14-enhanced]")
+                ) {
+                  const enhancedScript = gameDocument.createElement("script");
+                  enhancedScript.src = "/chronometers/enhanced-controls.js";
+                  enhancedScript.dataset.surfvt14Enhanced = "true";
+                  (gameDocument.head || gameDocument.documentElement).appendChild(
+                    enhancedScript,
+                  );
                 }
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
