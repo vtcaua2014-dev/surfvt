@@ -458,7 +458,6 @@ type HubSettings = {
   timerStyle: TimerStyle;
   timerScale: number;
   timerFont: string;
-  hoverboard: boolean;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
   wasdEnabled: boolean;
@@ -481,7 +480,6 @@ const defaultSettings: HubSettings = {
   timerStyle: "chrono",
   timerScale: 100,
   timerFont: "Rajdhani",
-  hoverboard: false,
   autoBoostEnabled: false,
   autoBoostHotkey: "B",
   wasdEnabled: true,
@@ -623,7 +621,6 @@ const uiCopy: Record<
     wasdSize: string;
     horizontal: string;
     vertical: string;
-    hoverboard: string;
     autoBoost: string;
     autoBoostHotkey: string;
     note: string;
@@ -699,7 +696,6 @@ const uiCopy: Record<
     wasdSize: "TAMANHO DO WASD",
     horizontal: "POSIÇÃO HORIZONTAL",
     vertical: "POSIÇÃO VERTICAL",
-    hoverboard: "THREE TOUCH HOVERBOARD",
     autoBoost: "AUTOBOOST · 3 CLIQUES NO FOGUETE",
     autoBoostHotkey: "HOTKEY DO AUTOBOOST",
     note: "As configurações são aplicadas imediatamente e ficam salvas neste navegador.",
@@ -777,7 +773,6 @@ const uiCopy: Record<
     wasdSize: "WASD SIZE",
     horizontal: "HORIZONTAL POSITION",
     vertical: "VERTICAL POSITION",
-    hoverboard: "THREE TOUCH HOVERBOARD",
     autoBoost: "AUTOBOOST · 3 ROCKET CLICKS",
     autoBoostHotkey: "AUTOBOOST HOTKEY",
     note: "Settings apply immediately and are saved in this browser.",
@@ -854,7 +849,6 @@ const uiCopy: Record<
     wasdSize: "WASD-GRÖSSE",
     horizontal: "HORIZONTALE POSITION",
     vertical: "VERTIKALE POSITION",
-    hoverboard: "THREE TOUCH HOVERBOARD",
     autoBoost: "AUTOBOOST · 3 ROCKET-KLICKS",
     autoBoostHotkey: "AUTOBOOST-HOTKEY",
     note: "Einstellungen werden sofort angewendet und im Browser gespeichert.",
@@ -932,7 +926,6 @@ const uiCopy: Record<
     wasdSize: "TAILLE WASD",
     horizontal: "POSITION HORIZONTALE",
     vertical: "POSITION VERTICALE",
-    hoverboard: "THREE TOUCH HOVERBOARD",
     autoBoost: "AUTOBOOST · 3 CLICS FUSÉE",
     autoBoostHotkey: "TOUCHE AUTOBOOST",
     note: "Les réglages sont appliqués immédiatement et sauvegardés dans ce navigateur.",
@@ -1010,7 +1003,6 @@ const uiCopy: Record<
     wasdSize: "WASD 大小",
     horizontal: "水平位置",
     vertical: "垂直位置",
-    hoverboard: "THREE TOUCH HOVERBOARD",
     autoBoost: "自动加速 · 火箭点击 3 次",
     autoBoostHotkey: "自动加速热键",
     note: "设置会立即应用并保存在此浏览器中。",
@@ -1844,7 +1836,6 @@ function GamePlayer({
         {
           type: "SURFVT14_HUB_SETTINGS",
           settings: {
-            hoverboard: settings.hoverboard,
             controls: settings.controls,
             timerEnabled: settings.timerEnabled,
             saturation: settings.saturation,
@@ -1852,7 +1843,6 @@ function GamePlayer({
             volume: settings.volume,
             autoBoostEnabled: settings.autoBoostEnabled,
             autoBoostHotkey: settings.autoBoostHotkey,
-            hoverboard: settings.hoverboard,
           },
         },
         "*",
@@ -2136,16 +2126,24 @@ function GamePlayer({
                 onProgress(1);
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
-                if (
-                  gameDocument &&
-                  !gameDocument.querySelector("script[data-surfvt14-enhanced]")
-                ) {
-                  const enhancedScript = gameDocument.createElement("script");
-                  enhancedScript.src = "/chronometers/enhanced-controls.js";
-                  enhancedScript.dataset.surfvt14Enhanced = "true";
-                  (
-                    gameDocument.head || gameDocument.documentElement
-                  ).appendChild(enhancedScript);
+                if (gameDocument) {
+                  const scriptSelector =
+                    map === "zurich"
+                      ? "script[data-surfvt14-zurich-settings]"
+                      : "script[data-surfvt14-enhanced]";
+                  if (!gameDocument.querySelector(scriptSelector)) {
+                    const settingsScript = gameDocument.createElement("script");
+                    if (map === "zurich") {
+                      settingsScript.src = "/chronometers/zurich-three-touch.js";
+                      settingsScript.dataset.surfvt14ZurichSettings = "true";
+                    } else {
+                      settingsScript.src = "/chronometers/enhanced-controls.js";
+                      settingsScript.dataset.surfvt14Enhanced = "true";
+                    }
+                    (gameDocument.head || gameDocument.documentElement).appendChild(
+                      settingsScript,
+                    );
+                  }
                 }
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
@@ -2320,6 +2318,7 @@ export default function MapHub() {
       const stored = JSON.parse(
         localStorage.getItem("surfvt14-settings") || "{}",
       );
+      delete stored.hoverboard;
       const supportedResolutions = [
         "fullscreen",
         "608x1080",
@@ -2373,10 +2372,6 @@ export default function MapHub() {
     const persist = () => {
       try {
         localStorage.setItem("surfvt14-settings", JSON.stringify(settings));
-        localStorage.setItem(
-          "surfvt14BoardTripleTap",
-          settings.hoverboard ? "true" : "false",
-        );
       } catch {}
     };
     persist();
@@ -3505,16 +3500,6 @@ export default function MapHub() {
                     </label>
                   </>
                 )}
-                <label>
-                  <span>{copy.hoverboard}</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.hoverboard}
-                    onChange={(e) =>
-                      updateSetting("hoverboard", e.target.checked)
-                    }
-                  />
-                </label>
                 <label className="autoboost-setting">
                   <span>{copy.autoBoost}</span>
                   <input
