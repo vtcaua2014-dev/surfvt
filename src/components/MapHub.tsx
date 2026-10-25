@@ -2144,18 +2144,6 @@ function GamePlayer({
                 onProgress(1);
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
-                if (
-                  map !== "zurich" &&
-                  gameDocument &&
-                  !gameDocument.querySelector("script[data-surfvt14-enhanced]")
-                ) {
-                  const enhancedScript = gameDocument.createElement("script");
-                  enhancedScript.src = "/chronometers/enhanced-controls.js";
-                  enhancedScript.dataset.surfvt14Enhanced = "true";
-                  (gameDocument.head || gameDocument.documentElement).appendChild(
-                    enhancedScript,
-                  );
-                }
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
                     { type: "SURFVT14_HUB_SETTINGS", settings },
@@ -2225,6 +2213,17 @@ function GamePlayer({
             })}
           </div>
         </div>
+      )}
+      {isVisible && settings.autoBoostEnabled && !downloadOnly && !isDesktop && (
+        <button
+          type="button"
+          className="autoboost-in-game"
+          onClick={triggerAutoBoost}
+          aria-label="Ativar AutoBoost"
+          title="AutoBoost"
+        >
+          <Zap aria-hidden="true" /> BOOST
+        </button>
       )}
       {isVisible && settings.fps && (
         <div
