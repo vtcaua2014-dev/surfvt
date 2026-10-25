@@ -1000,18 +1000,28 @@
     let startY = 0;
     let offsetX = 0;
     let offsetY = 0;
+    let holdTimer = 0;
+    let longOpened = false;
+    let tapTimer = 0;
 
     chronoEl.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       pointerId = event.pointerId;
       dragging = true;
       moved = false;
+      longOpened = false;
       startX = event.clientX;
       startY = event.clientY;
       const rect = chronoEl.getBoundingClientRect();
       offsetX = event.clientX - rect.left;
       offsetY = event.clientY - rect.top;
       chronoEl.setPointerCapture?.(event.pointerId);
+      holdTimer = window.setTimeout(() => {
+        if (dragging && !moved) {
+          longOpened = true;
+          openPopup();
+        }
+      }, 2000);
       event.preventDefault();
     });
 
@@ -1021,6 +1031,7 @@
       const dy = event.clientY - startY;
       if (!moved && Math.hypot(dx, dy) > 5) {
         moved = true;
+        window.clearTimeout(holdTimer);
         chronoEl.classList.add('dragging');
       }
       if (!moved) return;
@@ -1033,9 +1044,23 @@
       if (!dragging || event.pointerId !== pointerId) return;
       dragging = false;
       pointerId = null;
+      window.clearTimeout(holdTimer);
       chronoEl.classList.remove('dragging');
-      if (moved) saveSettings();
-      else if (popup.style.display !== 'block') openPopup();
+      if (moved) {
+        saveSettings();
+      } else if (longOpened) {
+        longOpened = false;
+      } else if (tapTimer) {
+        window.clearTimeout(tapTimer);
+        tapTimer = 0;
+        resetTimer();
+      } else {
+        tapTimer = window.setTimeout(() => {
+          tapTimer = 0;
+          if (timerState === 'stopped' || timerState === 'ended') startNewRun();
+          else togglePause();
+        }, 260);
+      }
       moved = false;
     };
 
