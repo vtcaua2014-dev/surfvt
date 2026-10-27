@@ -28,6 +28,11 @@
     }
   };
 
+  try {
+    const saved = JSON.parse(localStorage.getItem('surfvt14-wasd-visual') || '{}');
+    for (const key of ['size', 'accent', 'font', 'background']) if (saved[key] != null) config[key] = saved[key];
+  } catch (_) {}
+
   const pressed = new Set();
   let host, root, panel;
 
@@ -344,6 +349,7 @@
         }
       }
 
+      try { localStorage.setItem('surfvt14-wasd-visual', JSON.stringify({size:config.size,accent:config.accent,font:config.font,background:config.background})); } catch (_) {}
       render();
       return api;
     },
