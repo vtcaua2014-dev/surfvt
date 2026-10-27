@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import { GripHorizontal, Pause, Play, RotateCcw, Settings, Zap } from "lucide-react";
+import { GripHorizontal, Settings, Zap } from "lucide-react";
 import "./p14-overlays.css";
 
 type WidgetId = "fps" | "wasd";
