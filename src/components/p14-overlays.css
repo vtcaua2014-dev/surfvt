@@ -109,7 +109,13 @@
 .p14-key-left { grid-column: 1; grid-row: 2; }
 .p14-key-down { grid-column: 2; grid-row: 2; }
 .p14-key-right { grid-column: 3; grid-row: 2; }
-.p14-keycap.is-active, .p14-keycap:active { background: #158bcc; transform: scale(.94); }
+.p14-keycap.is-active, .p14-keycap:active {
+  background: var(--p14-color);
+  color: #09121c;
+  border-color: var(--p14-color);
+  box-shadow: 0 0 12px var(--p14-color), 0 0 24px color-mix(in srgb, var(--p14-color) 50%, transparent);
+  transform: scale(.94);
+}
 .p14-boost-key {
   display: flex; align-items: center; justify-content: center; gap: 5px;
   width: 100%; margin-top: 6px; border: 1px solid rgba(255,255,255,.45); border-radius: 8px;
