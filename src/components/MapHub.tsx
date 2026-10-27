@@ -1176,9 +1176,9 @@ function GamePlayer({
     return () => {
       frame.removeEventListener("load", sync);
       const doc = frame.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings, controlKeys);
+      if (doc) configureExternalTimers(doc, false, settings, controlKeys, isDesktop);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled]);
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled, settings.controls, settings.customControls.up, settings.customControls.left, settings.customControls.down, settings.customControls.right, isDesktop]);
 
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) return;
@@ -1792,7 +1792,7 @@ function GamePlayer({
                 onProgress(1);
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
-                if (gameDocument && timerCompatible && isVisible && settings.timerEnabled)
+                if (gameDocument && timerCompatible && isVisible)
                   configureExternalTimers(gameDocument, settings.timerEnabled, settings, controlKeys, isDesktop);
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
