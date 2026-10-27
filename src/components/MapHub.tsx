@@ -1093,7 +1093,7 @@ function configureExternalTimers(doc: Document, enabled: boolean, settings: HubS
     window.location.origin,
   );
   if (hasController) send();
-  else if (enabled) void ensureExternalTimerScripts(doc).then(send);
+  else void ensureExternalTimerScripts(doc).then(send);
 }
 
 type GamePlayerProps = {
@@ -1159,7 +1159,7 @@ function GamePlayer({
     onReady();
   }, [downloadOnly]);
   useEffect(() => {
-    if (!timerCompatible || !isVisible || !settings.timerEnabled) {
+    if (!timerCompatible || !isVisible) {
       const doc = frameRef.current?.contentDocument;
       if (doc) configureExternalTimers(doc, false, settings, controlKeys);
       return;
@@ -1176,7 +1176,7 @@ function GamePlayer({
     return () => {
       frame.removeEventListener("load", sync);
       const doc = frame.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
+      if (doc) configureExternalTimers(doc, false, settings, controlKeys);
     };
   }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled]);
 
