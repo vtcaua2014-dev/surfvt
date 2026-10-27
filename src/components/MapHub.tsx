@@ -1057,6 +1057,7 @@ const externalTimerFiles = [
   ["settings", "/chronometers/timer-settings.js"],
 ] as const;
 const externalTimerLoads = new WeakMap<Document, Promise<void>>();
+const externalTimerVersions = new WeakMap<Document, number>();
 
 function ensureExternalTimerScripts(doc: Document): Promise<void> {
   const pending = externalTimerLoads.get(doc);
@@ -1099,10 +1100,12 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
 function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[], isDesktop: boolean) {
   const gameWindow = doc.defaultView;
   if (!gameWindow || doc.URL === "about:blank") return;
+  const version = (externalTimerVersions.get(doc) || 0) + 1;
+  externalTimerVersions.set(doc, version);
   // A visualização das teclas é React tanto no desktop como no celular.
   // A ponte interna permanece responsável apenas pelos eventos reais do jogo.
   const send = () => {
-    if (doc.defaultView !== gameWindow || !doc.documentElement?.isConnected) return;
+    if (doc.defaultView !== gameWindow || !doc.documentElement?.isConnected || externalTimerVersions.get(doc) !== version) return;
     gameWindow.postMessage(
       { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: false, controlKeys },
       window.location.origin,
@@ -1192,8 +1195,8 @@ function GamePlayer({
     sync();
     return () => {
       frame.removeEventListener("load", sync);
-      const doc = frame.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings, controlKeys, isDesktop);
+      // Mudanças de preferências recriam este effect; não enfileirar uma
+      // configuração "disabled" que pode chegar DEPOIS da nova configuração.
     };
   }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled, settings.controls, settings.customControls.up, settings.customControls.left, settings.customControls.down, settings.customControls.right, isDesktop]);
 
