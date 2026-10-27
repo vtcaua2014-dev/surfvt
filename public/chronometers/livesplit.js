@@ -1081,7 +1081,7 @@
       pointerId = null;
       chronoEl.classList.remove('dragging');
       if (moved) saveSettings();
-      else if (popup.style.display !== 'block') handleTimerTap();
+      else if (event.type !== 'pointercancel' && popup.style.display !== 'block') handleTimerTap();
       moved = false;
     };
 
