@@ -95,6 +95,13 @@
 
     #chrono.dragging { cursor: grabbing; }
 
+    #chrono .chrono-settings-button {
+      position: absolute; left: 4px; top: 4px; z-index: 6; width: 26px; height: 26px;
+      display: grid; place-items: center; border: 1px solid rgba(255,255,255,.25); border-radius: 5px;
+      padding: 0; background: rgba(20,20,20,.82); color: #fff; font: 16px/1 Arial,sans-serif; cursor: pointer;
+    }
+    #chrono .chrono-settings-button:hover { background: rgba(45,45,45,.96); }
+
     #chrono .chrono-bg-layer {
       position: absolute;
       inset: 0;
@@ -421,6 +428,7 @@
   /* ---------- HTML ---------- */
   document.body.insertAdjacentHTML('beforeend', `
     <div id="chrono" aria-label="LiveSplit style timer">
+      <button id="chronoSettingsBtn" class="chrono-settings-button" type="button" aria-label="Configurações" title="Configurações">⚙</button>
       <div class="chrono-bg-layer" id="chronoBgLayer" aria-hidden="true"></div>
       <div class="chrono-time" id="chronoTime">
         <span id="chronoMain" class="chrono-main">0</span><span id="chronoFraction" class="chrono-fraction">.00</span>
@@ -754,6 +762,7 @@
   function togglePause() {
     if (timerState === 'running') pauseTimer('manual');
     else if (timerState === 'paused') resumeTimer('manual');
+    else startNewRun('manual');
   }
 
   function resetTimer() {
@@ -1014,6 +1023,20 @@
     chronoEl.style.top = `${Math.round(settings.top)}px`;
   }
 
+  let timerTapTimeout = 0;
+  function handleTimerTap() {
+    if (timerTapTimeout) {
+      window.clearTimeout(timerTapTimeout);
+      timerTapTimeout = 0;
+      resetTimer();
+      return;
+    }
+    timerTapTimeout = window.setTimeout(() => {
+      timerTapTimeout = 0;
+      togglePause();
+    }, 260);
+  }
+
   (function enableDrag() {
     let dragging = false;
     let moved = false;
@@ -1025,6 +1048,7 @@
 
     chronoEl.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest("#chronoSettingsBtn")) return;
       pointerId = event.pointerId;
       dragging = true;
       moved = false;
@@ -1057,7 +1081,7 @@
       pointerId = null;
       chronoEl.classList.remove('dragging');
       if (moved) saveSettings();
-      else if (popup.style.display !== 'block') openPopup();
+      else if (popup.style.display !== 'block') handleTimerTap();
       moved = false;
     };
 
@@ -1069,6 +1093,9 @@
   function openPopup() { popup.style.display = 'block'; updateHotkeyButtons(); }
   function closePopup() { popup.style.display = 'none'; pendingHotkey = null; updateHotkeyButtons(); }
 
+  const settingsBtn = document.getElementById('chronoSettingsBtn');
+  settingsBtn.addEventListener('pointerdown', (event) => event.stopPropagation());
+  settingsBtn.addEventListener('click', (event) => { event.stopPropagation(); openPopup(); });
   closeBtn.addEventListener('click', closePopup);
   popup.addEventListener('click', (event) => { if (event.target === popup) closePopup(); });
 
