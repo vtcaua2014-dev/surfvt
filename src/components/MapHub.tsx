@@ -2960,7 +2960,7 @@ export default function MapHub() {
                     maxLength={1}
                     value={settings.timerToggleHotkey.toUpperCase()}
                     aria-label="Hotkey para iniciar ou pausar os cronômetros"
-                    onChange={(e) => updateSetting("timerToggleHotkey", e.target.value.slice(-1).toLowerCase())}
+                    onChange={(e) => updateSetting("timerToggleHotkey", e.target.value.slice(-1).toLowerCase() || "q")}
                   />
                 </label>
                 <label>
@@ -2970,7 +2970,7 @@ export default function MapHub() {
                     maxLength={1}
                     value={settings.timerResetHotkey.toUpperCase()}
                     aria-label="Hotkey para reiniciar os cronômetros"
-                    onChange={(e) => updateSetting("timerResetHotkey", e.target.value.slice(-1).toLowerCase())}
+                    onChange={(e) => updateSetting("timerResetHotkey", e.target.value.slice(-1).toLowerCase() || "r")}
                   />
                 </label>
                 <label>
