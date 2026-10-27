@@ -649,6 +649,7 @@
   }
 
   /* ---------- timer state ---------- */
+  let autoModeEnabled = true;
   let timerState = 'stopped'; // stopped | running | paused
   let startedAt = 0;
   let elapsedMs = 0;
@@ -1251,6 +1252,7 @@
   }
 
   function chronoHandleAudio(data) {
+    if (!autoModeEnabled) return;
     const kind = chronoAudioKind(data);
     const now = performance.now();
 
@@ -1354,6 +1356,7 @@
   }
 
   function handleScoreChanged(detail) {
+    if (!autoModeEnabled) return;
     const value = scoreValueFrom(detail);
     if (value == null) return;
     const now = performance.now();
@@ -1381,6 +1384,7 @@
   }
 
   function handleScoreStopped(detail) {
+    if (!autoModeEnabled) return;
     if (timerState !== 'running') return;
     if (detail && detail.reason === 'death') pauseTimer('death');
     else pauseTimer('score');
@@ -1404,6 +1408,7 @@
 
   /* ---------- gameplay/event automation ---------- */
   function onRuntimeEvent(event) {
+    if (!autoModeEnabled) return;
     const detail = event && event.detail ? event.detail : {};
     const type = String(detail.type || '');
     const eventNow = performance.now();
@@ -1569,6 +1574,7 @@
   // Some builds do not forward the menu button to Poki. Use page visibility as
   // a fallback, but only pause on leaving and resume on returning to the game.
   document.addEventListener('visibilitychange', () => {
+    if (!autoModeEnabled) return;
     if (document.hidden) {
       if (timerState === 'running') pauseTimer('menu');
     } else if (timerState === 'paused' && pausedReason === 'menu') {
@@ -1869,6 +1875,7 @@
   applyGlobalChronoVisibility();
 
   window.chrono = {
+    setAutoMode: (enabled) => { autoModeEnabled = Boolean(enabled); },
     start: () => startNewRun('manual'),
     pause: () => pauseTimer('manual'),
     reset: resetTimer,
