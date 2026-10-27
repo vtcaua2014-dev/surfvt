@@ -30,6 +30,7 @@
     runningColor: '#29cc54',
     pausedColor: PAUSED_COLOR,
     stoppedColor: STOPPED_COLOR,
+    endedColor: '#ff5a5f',
     shadowColor: SHADOW_COLOR,
     timeFormat: 'auto',
     backgroundImage: '',
@@ -802,6 +803,7 @@
   }
 
   function currentBaseColor() {
+    if (timerState === 'paused' && pausedReason === 'death') return settings.endedColor || '#ff5a5f';
     if (timerState === 'paused' && pausedReason === 'manual') return settings.pausedColor || PAUSED_COLOR;
     if (timerState === 'paused') return settings.stoppedColor || STOPPED_COLOR;
     if (timerState === 'stopped') return settings.stoppedColor || STOPPED_COLOR;
@@ -1876,6 +1878,7 @@
 
   window.chrono = {
     setAutoMode: (enabled) => { autoModeEnabled = Boolean(enabled); },
+    setVisualOptions: (options = {}) => { for (const key of ['runningColor','pausedColor','stoppedColor','endedColor']) if (/^#[0-9a-f]{6}$/i.test(options[key] || '')) settings[key] = options[key]; lastGradientSignature = ''; applyGradientColor(); render(); },
     start: () => startNewRun('manual'),
     pause: () => pauseTimer('manual'),
     reset: resetTimer,
