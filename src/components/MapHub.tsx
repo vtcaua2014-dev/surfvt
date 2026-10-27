@@ -454,8 +454,10 @@ type HubSettings = {
   graphicsMode: GraphicsMode;
   timerEnabled: boolean;
   timerStyle: TimerStyle;
-  timerToggleHotkey: string;
+  timerStartHotkey: string;
+  timerPauseHotkey: string;
   timerResetHotkey: string;
+  timerAutoMode: boolean;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
   autoBoostCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
@@ -477,8 +479,10 @@ const defaultSettings: HubSettings = {
   graphicsMode: "off",
   timerEnabled: true,
   timerStyle: "chrono",
-  timerToggleHotkey: "q",
+  timerStartHotkey: "q",
+  timerPauseHotkey: "q",
   timerResetHotkey: "r",
+  timerAutoMode: true,
   autoBoostEnabled: false,
   autoBoostHotkey: "B",
   autoBoostCorner: "bottomLeft",
@@ -1049,6 +1053,8 @@ const externalTimerFiles = [
   ["chrono", "/chronometers/chrono.js"],
   ["native", "/chronometers/floatingclock.js"],
   ["controller", "/chronometers/timer-controller.js"],
+  ["keystrokes", "/chronometers/keystrokes.js"],
+  ["settings", "/chronometers/timer-settings.js"],
 ] as const;
 const externalTimerLoads = new WeakMap<Document, Promise<void>>();
 
@@ -1078,12 +1084,12 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
   return task;
 }
 
-function configureExternalTimers(doc: Document, enabled: boolean, mode: TimerStyle, toggleHotkey: string, resetHotkey: string) {
+function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[]) {
   const gameWindow = doc.defaultView;
   if (!gameWindow || doc.URL === "about:blank") return;
   const hasController = Boolean(doc.querySelector('script[data-surfvt14-timer="controller"]'));
   const send = () => gameWindow.postMessage(
-    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode, toggleHotkey, resetHotkey },
+    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: settings.wasdEnabled, controlKeys },
     window.location.origin,
   );
   if (hasController) send();
@@ -1102,6 +1108,7 @@ type GamePlayerProps = {
   onError: (message: string) => void;
   errorMessage: string | null;
   settings: HubSettings;
+  onTimerSettingsChange: (changes: Partial<Pick<HubSettings, "timerStyle" | "timerStartHotkey" | "timerPauseHotkey" | "timerResetHotkey" | "timerAutoMode">>) => void;
   veniceVariant?: VeniceVariant;
 };
 
@@ -1117,6 +1124,7 @@ function GamePlayer({
   onError,
   errorMessage,
   settings,
+  onTimerSettingsChange,
   veniceVariant = "normal",
 }: GamePlayerProps) {
   // Venice Moded continua mostrando o cronômetro, mas recebe record=off
@@ -1133,6 +1141,19 @@ function GamePlayer({
     at: 0,
   });
   useEffect(() => {
+    const onTimerSettings = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || event.data?.type !== "SURFVT14_TIMER_SETTINGS_CHANGE") return;
+      const changes = event.data.changes || {};
+      const patch: Partial<Pick<HubSettings, "timerStyle" | "timerStartHotkey" | "timerPauseHotkey" | "timerResetHotkey" | "timerAutoMode">> = {};
+      if (["native", "chrono", "livesplit"].includes(changes.timerStyle)) patch.timerStyle = changes.timerStyle;
+      for (const key of ["timerStartHotkey", "timerPauseHotkey", "timerResetHotkey"] as const) if (typeof changes[key] === "string" && changes[key].length <= 1) patch[key] = changes[key].toLowerCase() || (key === "timerResetHotkey" ? "r" : "q");
+      if (typeof changes.timerAutoMode === "boolean") patch.timerAutoMode = changes.timerAutoMode;
+      if (Object.keys(patch).length) onTimerSettingsChange(patch);
+    };
+    window.addEventListener("message", onTimerSettings);
+    return () => window.removeEventListener("message", onTimerSettings);
+  }, [onTimerSettingsChange]);
+  useEffect(() => {
     if (!downloadOnly) return;
     onProgress(1);
     onReady();
@@ -1140,7 +1161,7 @@ function GamePlayer({
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) {
       const doc = frameRef.current?.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
+      if (doc) configureExternalTimers(doc, false, settings, controlKeys);
       return;
     }
     const frame = frameRef.current;
@@ -1148,7 +1169,7 @@ function GamePlayer({
     const sync = () => {
       const doc = frame.contentDocument;
       if (!doc || doc.URL === "about:blank") return;
-      configureExternalTimers(doc, true, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
+      configureExternalTimers(doc, settings.timerEnabled, settings, controlKeys);
     };
     frame.addEventListener("load", sync);
     sync();
@@ -1157,24 +1178,20 @@ function GamePlayer({
       const doc = frame.contentDocument;
       if (doc) configureExternalTimers(doc, false, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey]);
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled]);
 
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) return;
-    const sendCommand = (action: "toggle" | "reset") => {
-      frameRef.current?.contentWindow?.postMessage(
-        { type: "SURFVT14_TIMER_COMMAND", action },
-        window.location.origin,
-      );
-    };
+    const sendCommand = (action: "toggle" | "start" | "pause" | "reset") => frameRef.current?.contentWindow?.postMessage({ type: "SURFVT14_TIMER_COMMAND", action }, window.location.origin);
     const onKey = (event: KeyboardEvent) => {
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
       const key = event.key.toLowerCase();
-      if (key !== settings.timerToggleHotkey.toLowerCase() && key !== settings.timerResetHotkey.toLowerCase()) return;
+      const start = settings.timerStartHotkey.toLowerCase(), pause = settings.timerPauseHotkey.toLowerCase(), reset = settings.timerResetHotkey.toLowerCase();
+      if (![start, pause, reset].includes(key)) return;
       event.preventDefault();
-      sendCommand(key === settings.timerToggleHotkey.toLowerCase() ? "toggle" : "reset");
+      sendCommand(start === pause && key === start ? "toggle" : key === start ? "start" : key === pause ? "pause" : "reset");
     };
     const toggleEvent = () => sendCommand("toggle");
     const resetEvent = () => sendCommand("reset");
@@ -1186,7 +1203,7 @@ function GamePlayer({
       window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggleEvent);
       window.removeEventListener("SURFVT14_TIMER_RESET", resetEvent);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerToggleHotkey, settings.timerResetHotkey]);
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey]);
 
   const customControlKeys = [
     settings.customControls.up,
@@ -1776,7 +1793,7 @@ function GamePlayer({
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
                 if (gameDocument && timerCompatible && isVisible && settings.timerEnabled)
-                  configureExternalTimers(gameDocument, true, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
+                  configureExternalTimers(gameDocument, settings.timerEnabled, settings, controlKeys);
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
                     { type: "SURFVT14_HUB_SETTINGS", settings },
@@ -1843,7 +1860,7 @@ function GamePlayer({
         <P14Overlays
           fpsEnabled={settings.fps}
           fpsCap={settings.fpsCap}
-          wasdEnabled={settings.wasdEnabled}
+          wasdEnabled={settings.wasdEnabled && !isDesktop}
           controlKeys={displayControlKeys}
           pressedKey={pressedKey}
           isDesktop={isDesktop}
@@ -2194,6 +2211,7 @@ export default function MapHub() {
       {(isLoadingGame || isPlaying) && (
         <GamePlayer
           map={launchedMap}
+          onTimerSettingsChange={(changes) => setSettings((current) => ({ ...current, ...changes }))}
           mapPath={
             launchedMap === "venice" && veniceVariant === "normal"
               ? "/maps/venice-normal/index.html"
@@ -2948,21 +2966,17 @@ export default function MapHub() {
                       updateSetting("timerStyle", e.target.value as TimerStyle)
                     }
                   >
-                    <option value="native">SURFVT14</option>
-                    <option value="livesplit">LIVESPLIT WEB</option>
-                    <option value="chrono">CHRONO 4.0</option>
+                    <option value="native">Floating Clock</option>
+                    <option value="livesplit">LiveSplit</option>
+                    <option value="chrono">Chrono</option>
                   </select>
                 </label>
                 <label>
-                  <span>HOTKEY · INICIAR / PAUSAR</span>
-                  <input
-                    type="text"
-                    maxLength={1}
-                    value={settings.timerToggleHotkey.toUpperCase()}
-                    aria-label="Hotkey para iniciar ou pausar os cronômetros"
-                    onChange={(e) => updateSetting("timerToggleHotkey", e.target.value.slice(-1).toLowerCase() || "q")}
-                  />
+                  <span>HOTKEY · INICIAR</span>
+                  <input type="text" maxLength={1} value={settings.timerStartHotkey.toUpperCase()} aria-label="Hotkey para iniciar" onChange={(e) => updateSetting("timerStartHotkey", e.target.value.slice(-1).toLowerCase() || "q")} />
                 </label>
+                <label><span>HOTKEY · PAUSAR</span><input type="text" maxLength={1} value={settings.timerPauseHotkey.toUpperCase()} aria-label="Hotkey para pausar" onChange={(e) => updateSetting("timerPauseHotkey", e.target.value.slice(-1).toLowerCase() || "q")} /></label>
+                <label><span>MODO AUTOMÁTICO</span><input type="checkbox" checked={settings.timerAutoMode} onChange={(e) => updateSetting("timerAutoMode", e.target.checked)} /></label>
                 <label>
                   <span>HOTKEY · REINICIAR</span>
                   <input
