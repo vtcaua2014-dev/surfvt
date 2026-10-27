@@ -15,7 +15,9 @@
     only4: false,
     extra: [],
     size: 52,
-    accent: '#6366f1',
+    accent: '#149df2',
+    font: 'system-ui, sans-serif',
+    background: 'rgba(10,10,12,.78)',
     left: 12,
     bottom: 12,
     wasd: {
@@ -95,16 +97,21 @@
         max-width:360px;
       }
 
+      .tools { position:absolute; right:-27px; top:0; display:grid; gap:4px; }
+      .tools button { width:22px; height:22px; border:1px solid #88caff; border-radius:6px; color:#fff; background:#123456; font:14px/1 system-ui; cursor:pointer; padding:0; }
+      .prefs { position:absolute; left:calc(100% + 5px); top:0; width:180px; padding:9px; display:grid; gap:7px; border:1px solid #567; border-radius:9px; color:#fff; background:#101820; font:12px system-ui; box-shadow:0 5px 18px #0008; }
+      .prefs[hidden] { display:none; }
+      .prefs label { display:flex; justify-content:space-between; align-items:center; gap:5px; }
       .cap {
         display:grid;
         place-items:center;
         width:var(--ks,52px);
         height:var(--ks,52px);
-        background:rgba(10,10,12,.78);
+        background:var(--ks-bg,rgba(10,10,12,.78));
         color:white;
         border:2px solid rgba(255,255,255,.5);
         border-radius:11px;
-        font:700 calc(var(--ks,52px)*.4)/1 system-ui,sans-serif;
+        font:700 calc(var(--ks,52px)*.4)/1 var(--ks-font,system-ui,sans-serif);
         transition:background .06s,transform .06s,border-color .06s;
         text-shadow:0 1px 2px rgba(0,0,0,.6);
         white-space:nowrap;
@@ -132,7 +139,25 @@
     panel = document.createElement('div');
     panel.className = 'panel';
 
-    root.append(style, panel);
+    const tools = document.createElement('div');
+    tools.className = 'tools';
+    const gear = document.createElement('button');
+    gear.type = 'button'; gear.title = 'Configurações das teclas'; gear.textContent = '⚙';
+    const prefs = document.createElement('div'); prefs.className = 'prefs'; prefs.hidden = true;
+    prefs.innerHTML = '<label>Tamanho<input data-size type="range" min="28" max="80"></label><label>Cor<input data-color type="color"></label><label>Fundo<input data-bg type="color"></label><label>Fonte<select data-font><option>system-ui, sans-serif</option><option>Arial, sans-serif</option><option>Verdana, sans-serif</option><option>Georgia, serif</option><option>monospace</option></select></label>';
+    tools.append(gear, prefs);
+    gear.addEventListener('pointerdown', e => e.stopPropagation());
+    gear.addEventListener('click', e => { e.stopPropagation(); prefs.hidden = !prefs.hidden; });
+    prefs.addEventListener('pointerdown', e => e.stopPropagation());
+    prefs.querySelector('[data-size]').value = config.size;
+    prefs.querySelector('[data-color]').value = config.accent;
+    prefs.querySelector('[data-bg]').value = '#0a0a0c';
+    prefs.querySelector('[data-font]').value = config.font;
+    prefs.querySelector('[data-size]').addEventListener('input', e => api.configure({size:Number(e.target.value)}));
+    prefs.querySelector('[data-color]').addEventListener('input', e => api.configure({accent:e.target.value}));
+    prefs.querySelector('[data-bg]').addEventListener('input', e => api.configure({background:e.target.value}));
+    prefs.querySelector('[data-font]').addEventListener('change', e => api.configure({font:e.target.value}));
+    root.append(style, panel, tools);
     document.body.appendChild(host);
 
     let start = null;
@@ -233,6 +258,8 @@
     );
 
     host.style.setProperty('--acc', config.accent);
+    host.style.setProperty('--ks-font', config.font || 'system-ui,sans-serif');
+    host.style.setProperty('--ks-bg', config.background || 'transparent');
 
     panel.replaceChildren();
 
