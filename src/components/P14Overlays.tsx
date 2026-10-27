@@ -3,8 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import { GripHorizontal, Pause, Play, RotateCcw, Settings, Zap } from "lucide-react";
 import "./p14-overlays.css";
 
-type TimerStyle = "native" | "livesplit" | "chrono";
-type WidgetId = "floating" | "livesplit" | "chrono" | "fps" | "wasd";
+type WidgetId = "fps" | "wasd";
 type WidgetPrefs = {
   x: number;
   y: number;
@@ -17,9 +16,6 @@ type WidgetPrefs = {
 type WidgetPrefsMap = Record<WidgetId, WidgetPrefs>;
 
 type P14OverlaysProps = {
-  timerEnabled: boolean;
-  timerStyle: TimerStyle;
-  timerCompatible: boolean;
   fpsEnabled: boolean;
   fpsCap: string;
   wasdEnabled: boolean;
@@ -41,9 +37,6 @@ function defaultPrefs(): WidgetPrefsMap {
     x, y, scale: 1, color, background, font: "Century Gothic", opacity: 100,
   });
   return {
-    floating: base(14, 74, "#ffffff", "#000000"),
-    livesplit: base(14, 18, "#29cc54", "#000000"),
-    chrono: base(14, 18, "#ffffff", "rgba(0,0,0,.88)"),
     fps: base(Math.max(12, width - 110), 18, "#29cc54", "rgba(0,0,0,.78)"),
     wasd: base(18, Math.max(60, height - 170), "#ffffff", "#15171c"),
   };
@@ -64,29 +57,12 @@ function readPrefs(): WidgetPrefsMap {
   }
 }
 
-function formatTime(ms: number, style: TimerStyle) {
-  const value = Math.max(0, ms);
-  const cs = Math.floor(value / 10) % 100;
-  const t = Math.floor(value / 100) % 10;
-  const totalSeconds = Math.floor(value / 1000);
-  const seconds = totalSeconds % 60;
-  const minutes = Math.floor(totalSeconds / 60) % 60;
-  const hours = Math.floor(totalSeconds / 3600);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (style === "chrono") return [pad(hours), pad(minutes), pad(seconds)];
-  if (style === "native") return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds) + "." + t;
-  const main = hours > 0
-    ? hours + ":" + pad(minutes) + ":" + pad(seconds)
-    : minutes > 0 ? minutes + ":" + pad(seconds) : String(seconds);
-  return [main, "." + pad(cs)] as const;
-}
-
 function OverlaySettings({
   id, prefs, update,
 }: { id: WidgetId; prefs: WidgetPrefs; update: (patch: Partial<WidgetPrefs>) => void }) {
   return (
     <div className="p14-settings-panel" onPointerDown={(event) => event.stopPropagation()}>
-      <strong>{id === "wasd" ? "HOTKEYS" : id === "fps" ? "FPS" : "CRONÔMETRO"}</strong>
+      <strong>{id === "wasd" ? "HOTKEYS" : "FPS"}</strong>
       <label>Cor<input type="color" value={prefs.color} onChange={(event) => update({ color: event.target.value })} /></label>
       <label>Fundo<input type="color" value={prefs.background.startsWith("#") ? prefs.background : "#000000"} onChange={(event) => update({ background: event.target.value })} /></label>
       <label>Fonte
@@ -105,7 +81,7 @@ function OverlaySettings({
 }
 
 function OverlayWidget({
-  id, title, prefs, update, children, className = "", longPress,
+  id, title, prefs, update, children, className = "",
 }: {
   id: WidgetId;
   title: string;
@@ -113,14 +89,11 @@ function OverlayWidget({
   update: (patch: Partial<WidgetPrefs>) => void;
   children: ReactNode;
   className?: string;
-  longPress?: () => void;
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const drag = useRef<{ pointerId: number; x: number; y: number; left: number; top: number } | null>(null);
   const resize = useRef<{ pointerId: number; x: number; y: number; scale: number } | null>(null);
-  const hold = useRef<number | null>(null);
   const moved = useRef(false);
-  const suppressClick = useRef(false);
 
   const dragStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -153,22 +126,6 @@ function OverlayWidget({
     update({ scale: Math.max(.6, Math.min(2.2, resize.current.scale + delta)) });
   };
   const resizeEnd = () => { resize.current = null; };
-
-  const contentDown = () => {
-    if (!longPress) return;
-    moved.current = false;
-    if (hold.current != null) window.clearTimeout(hold.current);
-    hold.current = window.setTimeout(() => {
-      moved.current = true;
-      suppressClick.current = true;
-      setSettingsOpen(true);
-      longPress();
-    }, 2000);
-  };
-  const contentUp = () => {
-    if (hold.current != null) window.clearTimeout(hold.current);
-    hold.current = null;
-  };
 
   const style: CSSProperties & Record<string, string | number> = {
     left: prefs.x,
@@ -207,7 +164,7 @@ function OverlayWidget({
           <Settings aria-hidden="true" />
         </button>
       </div>
-      <div className="p14-widget-content" onPointerDown={contentDown} onPointerUp={contentUp} onPointerCancel={contentUp} onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
+      <div className="p14-widget-content">
         {children}
       </div>
       {(["nw", "ne", "sw", "se"] as const).map((corner) => (
@@ -229,17 +186,7 @@ function OverlayWidget({
 
 export default function P14Overlays(props: P14OverlaysProps) {
   const [prefs, setPrefs] = useState<WidgetPrefsMap>(readPrefs);
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [splits, setSplits] = useState<number[]>([]);
   const [fps, setFps] = useState(0);
-  const startedAt = useRef(0);
-  const baseElapsed = useRef(0);
-  const elapsedRef = useRef(0);
-  const tapTimer = useRef<number | null>(null);
-  const mode: TimerStyle = props.timerStyle;
-  const widgetId: WidgetId = mode === "native" ? "floating" : mode;
-  const timerVisible = props.timerEnabled && props.timerCompatible;
 
   const updatePrefs = useCallback((id: WidgetId, patch: Partial<WidgetPrefs>) => {
     setPrefs((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
@@ -248,77 +195,6 @@ export default function P14Overlays(props: P14OverlaysProps) {
   useEffect(() => {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage pode estar bloqueado */ }
   }, [prefs]);
-
-  const currentElapsed = () => running ? baseElapsed.current + performance.now() - startedAt.current : elapsedRef.current;
-  const startOrPause = () => {
-    if (running) {
-      const value = currentElapsed();
-      baseElapsed.current = value;
-      elapsedRef.current = value;
-      setElapsed(value);
-      setRunning(false);
-    } else {
-      if (elapsedRef.current === 0) baseElapsed.current = 0;
-      startedAt.current = performance.now();
-      setRunning(true);
-    }
-  };
-  const reset = () => {
-    baseElapsed.current = 0;
-    elapsedRef.current = 0;
-    setElapsed(0);
-    setRunning(false);
-    setSplits([]);
-    startedAt.current = 0;
-  };
-  const split = () => {
-    const value = currentElapsed();
-    elapsedRef.current = value;
-    setElapsed(value);
-    setSplits((items) => [...items, value].slice(-8));
-  };
-
-  useEffect(() => {
-    if (!running) return;
-    const interval = window.setInterval(() => {
-      const value = currentElapsed();
-      elapsedRef.current = value;
-      setElapsed(value);
-    }, 30);
-    return () => window.clearInterval(interval);
-  }, [running]);
-
-  useEffect(() => {
-    const toggle = () => startOrPause();
-    const clear = () => reset();
-    const addSplit = () => split();
-    const gameEvent = (event: Event) => {
-      const type = String((event as CustomEvent<{type?: string}>).detail?.type || "");
-      if (["poki:gameplayStart", "poki:roundStart", "reborn:runStarted"].includes(type) && !running) startOrPause();
-      if (["poki:roundEnd", "reborn:playerDied", "reborn:gameEnded"].includes(type) && running) startOrPause();
-    };
-    window.addEventListener("SURFVT14_TIMER_TOGGLE", toggle);
-    window.addEventListener("SURFVT14_TIMER_RESET", clear);
-    window.addEventListener("SURFVT14_TIMER_SPLIT", addSplit);
-    window.addEventListener("tro:unity-runtime-event", gameEvent);
-    return () => {
-      window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggle);
-      window.removeEventListener("SURFVT14_TIMER_RESET", clear);
-      window.removeEventListener("SURFVT14_TIMER_SPLIT", addSplit);
-      window.removeEventListener("tro:unity-runtime-event", gameEvent);
-    };
-  }, [running]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.repeat || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
-      if (event.code === "F2") { event.preventDefault(); startOrPause(); }
-      if (event.code === "F3") { event.preventDefault(); split(); }
-      if (event.code === "F4") { event.preventDefault(); reset(); }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [running]);
 
   useEffect(() => {
     if (!props.fpsEnabled) { setFps(0); return; }
@@ -340,59 +216,6 @@ export default function P14Overlays(props: P14OverlaysProps) {
     raf = requestAnimationFrame(measure);
     return () => { cancelAnimationFrame(raf); clearTimeout(timeout); };
   }, [props.fpsEnabled, props.fpsCap]);
-
-  useEffect(() => () => {
-    if (tapTimer.current != null) window.clearTimeout(tapTimer.current);
-  }, []);
-
-  const timerTap = () => {
-    if (tapTimer.current != null) {
-      window.clearTimeout(tapTimer.current);
-      tapTimer.current = null;
-      reset();
-    } else {
-      tapTimer.current = window.setTimeout(() => {
-        tapTimer.current = null;
-        startOrPause();
-      }, 260);
-    }
-  };
-
-  const timerPrefs = prefs[widgetId];
-  const updateTimerPrefs = (patch: Partial<WidgetPrefs>) => updatePrefs(widgetId, patch);
-  const formatted = formatTime(elapsed, mode);
-  const timerOverlay = timerVisible && (
-    <OverlayWidget
-      id={widgetId}
-      title={mode === "native" ? "Floating Clock" : mode === "chrono" ? "Chrono" : "LiveSplit"}
-      prefs={timerPrefs}
-      update={updateTimerPrefs}
-      className={mode === "native" ? "p14-timer-floating" : mode === "chrono" ? "p14-timer-chrono" : "p14-timer-livesplit"}
-      longPress={() => {}}
-    >
-      {mode === "native" && (
-        <>
-          <div className="p14-timer-heading"><span className="p14-clock-icon">9:00</span> Floating Clock</div>
-          <div className="p14-floating-time">{formatted}</div>
-          <div className="p14-floating-actions">
-            <button type="button" onClick={startOrPause} aria-label={running ? "Pausar" : "Iniciar"}>{running ? <Pause /> : <Play />}</button>
-            <button type="button" onClick={reset} aria-label="Reiniciar"><RotateCcw /></button>
-          </div>
-        </>
-      )}
-      {mode === "chrono" && (
-        <div className="p14-chrono-cells" onClick={timerTap} onDoubleClick={(event) => { event.preventDefault(); }}>
-          {(formatted as unknown as string[]).map((part, index) => <span className="p14-chrono-cell" key={index}>{part}</span>)}
-        </div>
-      )}
-      {mode === "livesplit" && (
-        <div className="p14-livesplit" onClick={timerTap}>
-          <div className="p14-live-time"><span>{(formatted as unknown as readonly string[])[0]}</span><small>{(formatted as unknown as readonly string[])[1]}</small></div>
-          {splits.length > 0 && <div className="p14-splits">{splits.map((value, index) => <div key={index}><span>#{index + 1}</span><b>{formatTime(value, "chrono").join(":")}</b></div>)}</div>}
-        </div>
-      )}
-    </OverlayWidget>
-  );
 
   const fpsOverlay = props.fpsEnabled && (
     <OverlayWidget id="fps" title="FPS" prefs={prefs.fps} update={(patch) => updatePrefs("fps", patch)} className="p14-fps-widget">
@@ -429,5 +252,5 @@ export default function P14Overlays(props: P14OverlaysProps) {
     </OverlayWidget>
   );
 
-  return <>{timerOverlay}{fpsOverlay}{wasdOverlay}</>;
+  return <>{fpsOverlay}{wasdOverlay}</>;
 }
