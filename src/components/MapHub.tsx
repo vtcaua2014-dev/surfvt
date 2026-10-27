@@ -454,6 +454,8 @@ type HubSettings = {
   graphicsMode: GraphicsMode;
   timerEnabled: boolean;
   timerStyle: TimerStyle;
+  timerToggleHotkey: string;
+  timerResetHotkey: string;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
   autoBoostCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
@@ -475,6 +477,8 @@ const defaultSettings: HubSettings = {
   graphicsMode: "off",
   timerEnabled: true,
   timerStyle: "chrono",
+  timerToggleHotkey: "q",
+  timerResetHotkey: "r",
   autoBoostEnabled: false,
   autoBoostHotkey: "B",
   autoBoostCorner: "bottomLeft",
@@ -1074,12 +1078,12 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
   return task;
 }
 
-function configureExternalTimers(doc: Document, enabled: boolean, mode: TimerStyle) {
+function configureExternalTimers(doc: Document, enabled: boolean, mode: TimerStyle, toggleHotkey: string, resetHotkey: string) {
   const gameWindow = doc.defaultView;
   if (!gameWindow || doc.URL === "about:blank") return;
   const hasController = Boolean(doc.querySelector('script[data-surfvt14-timer="controller"]'));
   const send = () => gameWindow.postMessage(
-    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode },
+    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode, toggleHotkey, resetHotkey },
     window.location.origin,
   );
   if (hasController) send();
@@ -1136,7 +1140,7 @@ function GamePlayer({
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) {
       const doc = frameRef.current?.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings.timerStyle);
+      if (doc) configureExternalTimers(doc, false, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
       return;
     }
     const frame = frameRef.current;
@@ -1144,7 +1148,7 @@ function GamePlayer({
     const sync = () => {
       const doc = frame.contentDocument;
       if (!doc || doc.URL === "about:blank") return;
-      configureExternalTimers(doc, true, settings.timerStyle);
+      configureExternalTimers(doc, true, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
     };
     frame.addEventListener("load", sync);
     sync();
@@ -1153,7 +1157,7 @@ function GamePlayer({
       const doc = frame.contentDocument;
       if (doc) configureExternalTimers(doc, false, settings.timerStyle);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle]);
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey]);
 
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) return;
@@ -1168,9 +1172,9 @@ function GamePlayer({
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
       const key = event.key.toLowerCase();
-      if (key !== "q" && key !== "r") return;
+      if (key !== settings.timerToggleHotkey.toLowerCase() && key !== settings.timerResetHotkey.toLowerCase()) return;
       event.preventDefault();
-      sendCommand(key === "q" ? "toggle" : "reset");
+      sendCommand(key === settings.timerToggleHotkey.toLowerCase() ? "toggle" : "reset");
     };
     const toggleEvent = () => sendCommand("toggle");
     const resetEvent = () => sendCommand("reset");
@@ -1182,7 +1186,7 @@ function GamePlayer({
       window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggleEvent);
       window.removeEventListener("SURFVT14_TIMER_RESET", resetEvent);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled]);
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerToggleHotkey, settings.timerResetHotkey]);
 
   const customControlKeys = [
     settings.customControls.up,
@@ -2946,6 +2950,26 @@ export default function MapHub() {
                     <option value="livesplit">LIVESPLIT WEB</option>
                     <option value="chrono">CHRONO 4.0</option>
                   </select>
+                </label>
+                <label>
+                  <span>HOTKEY · INICIAR / PAUSAR</span>
+                  <input
+                    type="text"
+                    maxLength={1}
+                    value={settings.timerToggleHotkey.toUpperCase()}
+                    aria-label="Hotkey para iniciar ou pausar os cronômetros"
+                    onChange={(e) => updateSetting("timerToggleHotkey", e.target.value.slice(-1).toLowerCase())}
+                  />
+                </label>
+                <label>
+                  <span>HOTKEY · REINICIAR</span>
+                  <input
+                    type="text"
+                    maxLength={1}
+                    value={settings.timerResetHotkey.toUpperCase()}
+                    aria-label="Hotkey para reiniciar os cronômetros"
+                    onChange={(e) => updateSetting("timerResetHotkey", e.target.value.slice(-1).toLowerCase())}
+                  />
                 </label>
                 <label>
                   <span>{copy.wasd}</span>
