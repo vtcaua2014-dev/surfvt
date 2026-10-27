@@ -1034,7 +1034,7 @@
     timerTapTimeout = window.setTimeout(() => {
       timerTapTimeout = 0;
       togglePause();
-    }, 260);
+    }, 300);
   }
 
   (function enableDrag() {
