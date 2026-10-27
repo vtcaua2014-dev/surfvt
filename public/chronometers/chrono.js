@@ -32,10 +32,9 @@
   let dragging=false, pointerId=null;
   host.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragging=true;pointerId=e.pointerId;originX=e.clientX;originY=e.clientY;baseX=position.x;baseY=position.y;moved=false;host.setPointerCapture(e.pointerId);});
   host.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==pointerId)return;const dx=e.clientX-originX,dy=e.clientY-originY;if(Math.hypot(dx,dy)>5)moved=true;if(!moved)return;position.x=Math.max(0,Math.min(innerWidth-40,baseX+dx));position.y=Math.max(0,Math.min(innerHeight-30,baseY+dy));host.style.left=position.x+'px';host.style.top=position.y+'px';});
-  host.addEventListener('pointerup',e=>{if(e.pointerId===pointerId){dragging=false;pointerId=null;}});
   let clickDelay=0;
-  host.addEventListener('click',e=>{if(moved){moved=false;return;}if(e.detail>1)return;clearTimeout(clickDelay);clickDelay=setTimeout(toggle,230);});
-  host.addEventListener('dblclick',()=>{clearTimeout(clickDelay);reset();});
+  function handleTap(){if(clickDelay){clearTimeout(clickDelay);clickDelay=0;reset();return;}clickDelay=setTimeout(()=>{clickDelay=0;toggle();},230);}
+  host.addEventListener('pointerup',e=>{if(e.pointerId===pointerId){const wasMoved=moved;dragging=false;pointerId=null;if(!wasMoved)handleTap();}});
   render();
   window[apiName]={start,pause,reset,toggle,destroy(){cancelAnimationFrame(raf);clearTimeout(clickDelay);host.remove();delete window[apiName];},get state(){return state;},get elapsed(){return current();},element:host};
  };
