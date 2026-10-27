@@ -3,7 +3,7 @@
   "use strict";
   if (window.__surfvt14TimerController) return;
 
-  let config = { enabled: false, mode: "chrono" };
+  let config = { enabled: false, mode: "chrono", toggleHotkey: "q", resetHotkey: "r" };
   let previousMode = "";
   let previousMaster = "";
   let previousTarget = "";
@@ -102,11 +102,11 @@
     if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.target?.isContentEditable) return;
     const key = String(event.key || "").toLowerCase();
-    if (key !== "q" && key !== "r") return;
+    if (key !== config.toggleHotkey && key !== config.resetHotkey) return;
     if (!config.enabled) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (key === "q") toggleMaster();
+    if (key === config.toggleHotkey) toggleMaster();
     else resetMaster();
   }
   window.addEventListener("message", (event) => {
@@ -115,7 +115,9 @@
     if (data.type === "SURFVT14_TIMERS_CONFIG") {
       config = {
         enabled: Boolean(data.enabled),
-        mode: validModes.has(data.mode) ? data.mode : "chrono"
+        mode: validModes.has(data.mode) ? data.mode : "chrono",
+        toggleHotkey: String(data.toggleHotkey || "q").toLowerCase(),
+        resetHotkey: String(data.resetHotkey || "r").toLowerCase()
       };
       sync();
     } else if (data.type === "SURFVT14_TIMER_COMMAND" && config.enabled) {
