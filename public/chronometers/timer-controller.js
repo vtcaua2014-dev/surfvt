@@ -1,17 +1,200 @@
 (() => {
-"use strict"; if(window.__surfvt14TimerController)return;
-let c={enabled:false,mode:"chrono",startHotkey:"q",pauseHotkey:"q",resetHotkey:"r",autoMode:true},pm="",pma="",pt="";
-const modes=new Set(["native","chrono","livesplit"]);
-function api(m){return m==="livesplit"?window.chrono:m==="chrono"?window.P14Chrono:m==="native"?window.P14FloatingClock:null}
-function state(m){try{return String(m==="livesplit"?api(m)?.state()?.timerState||"":api(m)?.state||"")}catch(_){return""}}
-function set(m,s){const a=api(m),x=state(m);if(!a)return;if(s==="stopped"){if(x!=="stopped")a.reset?.()}else if(s==="running"){if(x==="stopped")a.start?.();else if(x==="paused")(m==="livesplit"?a.resume?.():a.start?.())}else if(s==="paused"){if(x==="stopped"){a.start?.();a.pause?.()}else if(x==="running")a.pause?.()}}
-function sync(){for(const[m,q]of Object.entries({livesplit:"#chrono",chrono:"#p14-chrono",native:"#p14-floatingclock"})){const n=document.querySelector(q);if(n)n.style.display=c.enabled&&c.mode===m?"":"none"}if(window.P14WASD){const keyCode=x=>x==="↑"?"ArrowUp":x==="↓"?"ArrowDown":x==="←"?"ArrowLeft":x==="→"?"ArrowRight":/^.$/.test(x)?"Key"+x.toUpperCase():x;const k=c.controlKeys||["W","A","S","D"];const sig=JSON.stringify([c.wasdEnabled,k]);if(sig!==lastWASDConfig){window.P14WASD.configure({show:!!c.wasdEnabled,move:true,arrows:false,only4:true,left:18,bottom:18,wasd:{up:keyCode(k[0]||"W"),left:keyCode(k[1]||"A"),down:keyCode(k[2]||"S"),right:keyCode(k[3]||"D")}});lastWASDConfig=sig}}api("livesplit")?.setAutoMode?.(c.autoMode!==false);const a=state("livesplit"),b=state(c.mode);if(!a||!b)return;if(c.mode==="livesplit"){pm=c.mode;pma=a;pt=b;return}if(pm!==c.mode)set(c.mode,a);else if(a!==pma&&b===pt)set(c.mode,a);else if(b!==pt&&a===pma)set("livesplit",b);else if(b!==a)set(c.mode,a);pm=c.mode;pma=state("livesplit");pt=state(c.mode)}
-function toggle(){const m=api("livesplit")?"livesplit":c.mode,a=api(m),s=state(m);if(s==="running")a?.pause?.();else if(s==="paused")(a?.resume||a?.start)?.call(a);else a?.start?.();sync()}
-function start(){const m=api("livesplit")?"livesplit":c.mode;if(state(m)!=="running")api(m)?.start?.();sync()}
-function pause(){const m=api("livesplit")?"livesplit":c.mode;if(state(m)==="running")api(m)?.pause?.();sync()}
-function reset(){(api("livesplit")||api(c.mode))?.reset?.();sync()}
-function key(e){if(!c.enabled||e.repeat||e.ctrlKey||e.altKey||e.metaKey||e.target?.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||""))return;const k=(e.key||"").toLowerCase();if(![c.startHotkey,c.pauseHotkey,c.resetHotkey].includes(k))return;e.preventDefault();e.stopImmediatePropagation();if(c.startHotkey===c.pauseHotkey&&k===c.startHotkey)toggle();else if(k===c.startHotkey)start();else if(k===c.pauseHotkey)pause();else reset()}
-window.addEventListener("message",e=>{if(e.source!==parent||e.origin!==location.origin)return;const d=e.data||{};if(d.type==="SURFVT14_TIMERS_CONFIG"){c={...c,...d,enabled:!!d.enabled,mode:modes.has(d.mode)?d.mode:"chrono",startHotkey:String(d.startHotkey||"q").toLowerCase(),pauseHotkey:String(d.pauseHotkey||"q").toLowerCase(),resetHotkey:String(d.resetHotkey||"r").toLowerCase()};sync()}if(d.type==="SURFVT14_TIMER_COMMAND"&&c.enabled)({toggle,start,pause,reset}[d.action]||(()=>{}))()});
-window.addEventListener("SURFVT14_TIMER_TOGGLE",()=>c.enabled&&toggle());window.addEventListener("SURFVT14_TIMER_RESET",()=>c.enabled&&reset());document.addEventListener("keydown",key,true);
-window.__surfvt14TimerController={sync,setConfig(v){c={...c,...v};sync()},getConfig(){return{...c}}};setInterval(sync,80);sync();
+  "use strict";
+  if (window.__surfvt14TimerController) return;
+  let c = {
+      enabled: false,
+      mode: "chrono",
+      startHotkey: "q",
+      pauseHotkey: "q",
+      resetHotkey: "r",
+      autoMode: true,
+    },
+    pm = "",
+    pma = "",
+    pt = "";
+  let lastWASDConfig = "";
+  const modes = new Set(["native", "chrono", "livesplit"]);
+  function api(m) {
+    return m === "livesplit"
+      ? window.chrono
+      : m === "chrono"
+        ? window.P14Chrono
+        : m === "native"
+          ? window.P14FloatingClock
+          : null;
+  }
+  function state(m) {
+    try {
+      return String(
+        m === "livesplit"
+          ? api(m)?.state()?.timerState || ""
+          : api(m)?.state || "",
+      );
+    } catch (_) {
+      return "";
+    }
+  }
+  function set(m, s) {
+    const a = api(m),
+      x = state(m);
+    if (!a) return;
+    if (s === "stopped") {
+      if (x !== "stopped") a.reset?.();
+    } else if (s === "running") {
+      if (x === "stopped") a.start?.();
+      else if (x === "paused") m === "livesplit" ? a.resume?.() : a.start?.();
+    } else if (s === "paused") {
+      if (x === "stopped") {
+        a.start?.();
+        a.pause?.();
+      } else if (x === "running") a.pause?.();
+    }
+  }
+  function sync() {
+    for (const [m, q] of Object.entries({
+      livesplit: "#chrono",
+      chrono: "#p14-chrono",
+      native: "#p14-floatingclock",
+    })) {
+      const n = document.querySelector(q);
+      if (n) n.style.display = c.enabled && c.mode === m ? "" : "none";
+    }
+    if (window.P14WASD) {
+      const keyCode = (x) =>
+        x === "↑"
+          ? "ArrowUp"
+          : x === "↓"
+            ? "ArrowDown"
+            : x === "←"
+              ? "ArrowLeft"
+              : x === "→"
+                ? "ArrowRight"
+                : /^.$/.test(x)
+                  ? "Key" + x.toUpperCase()
+                  : x;
+      const k = c.controlKeys || ["W", "A", "S", "D"];
+      const signature = JSON.stringify([c.wasdEnabled, k]);
+      if (signature !== lastWASDConfig) {
+        window.P14WASD.configure({
+          show: !!c.wasdEnabled,
+          move: true,
+          arrows: false,
+          only4: true,
+          left: 18,
+          bottom: 18,
+          wasd: {
+            up: keyCode(k[0] || "W"),
+            left: keyCode(k[1] || "A"),
+            down: keyCode(k[2] || "S"),
+            right: keyCode(k[3] || "D"),
+          },
+        });
+        lastWASDConfig = signature;
+      }
+    }
+    api("livesplit")?.setAutoMode?.(c.enabled && c.autoMode !== false);
+    const a = state("livesplit"),
+      b = state(c.mode);
+    if (!a || !b) return;
+    if (c.mode === "livesplit") {
+      pm = c.mode;
+      pma = a;
+      pt = b;
+      return;
+    }
+    if (pm !== c.mode) {
+      set(c.mode, a);
+      const ms = api("livesplit")?.state?.().elapsedMs;
+      if (Number.isFinite(ms)) api(c.mode)?.setElapsed?.(ms);
+    } else if (a !== pma && b === pt) set(c.mode, a);
+    else if (b !== pt && a === pma) set("livesplit", b);
+    else if (b !== a) set(c.mode, a);
+    // A new automatic run can reset elapsed while both states stay "running".
+    // Mirror the authoritative clock, including that boundary, on every sync.
+    const elapsed = api("livesplit")?.state?.().elapsedMs;
+    if (Number.isFinite(elapsed)) api(c.mode)?.setElapsed?.(elapsed);
+    pm = c.mode;
+    pma = state("livesplit");
+    pt = state(c.mode);
+  }
+  function toggle() {
+    const m = api("livesplit") ? "livesplit" : c.mode,
+      a = api(m),
+      s = state(m);
+    if (s === "running") a?.pause?.();
+    else if (s === "paused") (a?.resume || a?.start)?.call(a);
+    else a?.start?.();
+    sync();
+  }
+  function start() {
+    const m = api("livesplit") ? "livesplit" : c.mode;
+    if (state(m) === "paused") (api(m)?.resume || api(m)?.start)?.call(api(m));
+    else if (state(m) !== "running") api(m)?.start?.();
+    sync();
+  }
+  function pause() {
+    const m = api("livesplit") ? "livesplit" : c.mode;
+    if (state(m) === "running") api(m)?.pause?.();
+    sync();
+  }
+  function reset() {
+    (api("livesplit") || api(c.mode))?.reset?.();
+    sync();
+  }
+  function key(e) {
+    if (
+      !c.enabled ||
+      e.repeat ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.metaKey ||
+      e.target?.isContentEditable ||
+      /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || "")
+    )
+      return;
+    const k = (e.key || "").toLowerCase();
+    if (![c.startHotkey, c.pauseHotkey, c.resetHotkey].includes(k)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (c.startHotkey === c.pauseHotkey && k === c.startHotkey) toggle();
+    else if (k === c.startHotkey) start();
+    else if (k === c.pauseHotkey) pause();
+    else reset();
+    return true;
+  }
+  window.addEventListener("message", (e) => {
+    if (e.source !== parent || e.origin !== location.origin) return;
+    const d = e.data || {};
+    if (d.type === "SURFVT14_TIMERS_CONFIG") {
+      c = {
+        ...c,
+        ...d,
+        enabled: !!d.enabled,
+        mode: modes.has(d.mode) ? d.mode : "chrono",
+        startHotkey: String(d.startHotkey || "q").toLowerCase(),
+        pauseHotkey: String(d.pauseHotkey || "q").toLowerCase(),
+        resetHotkey: String(d.resetHotkey || "r").toLowerCase(),
+      };
+      sync();
+    }
+    if (d.type === "SURFVT14_TIMER_COMMAND" && c.enabled)
+      (({ toggle, start, pause, reset })[d.action] || (() => {}))();
+  });
+  window.addEventListener("SURFVT14_TIMER_TOGGLE", () => c.enabled && toggle());
+  window.addEventListener("SURFVT14_TIMER_RESET", () => c.enabled && reset());
+  if (!window.__surfvt14InputBridge)
+    document.addEventListener("keydown", key, true);
+  window.__surfvt14TimerController = {
+    sync,
+    handleKey: key,
+    setConfig(v) {
+      c = { ...c, ...v };
+      sync();
+    },
+    getConfig() {
+      return { ...c };
+    },
+  };
+  setInterval(sync, 80);
+  sync();
 })();

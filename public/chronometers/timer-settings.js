@@ -1,29 +1,408 @@
-(()=>{"use strict";if(window.__surfvtTimerSettings)return;
-const key="surfvt14-timer-visual-v1",fonts=["System","Alike Angular","Almendra","Caudex","Chivo Black","Corben","Courgette","Cuprum","Electrolize","Federant","Forum","Kenia","Milonga","Miltonian","Oleo Script Swash Caps","PT Serif Web","Reenie Beanie","Sirin Stencil","Trochut","Yesteryear"];
-const defaults={mode:"chrono",auto:true,start:"q",pause:"q",reset:"r",scale:1,radius:8,font:"System",size:34,bg:"",customFontData:"",colors:{running:"#39d353",paused:"#2196f3",stopped:"#9a9a9a",ended:"#ff5a5f"}};
-let s;try{s={...defaults,...JSON.parse(localStorage.getItem(key)||"{}")}}catch(_){s={...defaults}}
-function save(){localStorage.setItem(key,JSON.stringify(s));apply();frame.parent.postMessage({type:"SURFVT14_TIMER_SETTINGS_CHANGE",changes:{timerStyle:s.mode,timerStartHotkey:s.start,timerPauseHotkey:s.pause,timerResetHotkey:s.reset,timerAutoMode:s.auto}},"*")}
-function host(m){return m==="livesplit"?document.querySelector("#chrono"):m==="chrono"?window.P14Chrono?.element:window.P14FloatingClock?.element}
-function rootOf(n){return n?.shadowRoot||document}
-function apply(){if(s.customFontData){let custom=document.getElementById("surfvt-custom-font");if(!custom){custom=document.createElement("style");custom.id="surfvt-custom-font";document.head.append(custom)}custom.textContent='@font-face{font-family:"Custom Timer Font";src:url("'+s.customFontData+'")}'}const m=s.mode,n=host(m);if(!n)return; n.style.transform="scale("+s.scale+")";n.style.transformOrigin="top left";const root=rootOf(n),box=m==="livesplit"?n:root.querySelector(".timer");if(!box)return;box.style.setProperty("border-radius",s.radius+"px","important");box.style.fontFamily='"'+s.font+'",system-ui,sans-serif';box.style.backgroundImage=s.bg?'url("'+s.bg+'")':"";const st=m==="livesplit"?document.documentElement:root;const stt=m==="livesplit"?(window.chrono?.state()||{}):{};const rawState=m==="livesplit"?stt.timerState:(window[m==="chrono"?"P14Chrono":"P14FloatingClock"]?.state||"stopped");const state=stt.pausedReason==="death"?"ended":rawState;const color=s.colors[state==="running"?"running":state==="paused"?"paused":state==="ended"?"ended":"stopped"];if(m==="livesplit")window.chrono?.setVisualOptions?.({runningColor:s.colors.running,pausedColor:s.colors.paused,stoppedColor:s.colors.stopped,endedColor:s.colors.ended});if(m==="livesplit"){const h=color.replace("#","");const rgb=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));const mix=(v,p)=>Math.round(v+(p>=0?255-v:-v)*Math.abs(p));const hex=p=>"#"+rgb.map(v=>mix(v,p).toString(16).padStart(2,"0")).join("");box.style.setProperty("--chrono-top",hex(.32));box.style.setProperty("--chrono-bottom",hex(-.22))}box.style.setProperty("--chrono-font-family",'"'+s.font+'",system-ui,sans-serif');box.style.setProperty("--chrono-running",s.colors.running);box.style.setProperty("--chrono-paused",s.colors.paused);box.style.setProperty("--chrono-stopped",s.colors.stopped);const digits=root.querySelector(m==="livesplit"?".chrono-time":".time");if(digits){digits.style.color=color;digits.style.fontSize=s.size+"px"}if(m==="livesplit"){const main=root.querySelector(".chrono-main"),fraction=root.querySelector(".chrono-fraction");main?.style.setProperty("font-size",s.size+"px","important");fraction?.style.setProperty("font-size",Math.round(s.size*.55)+"px","important");const oldButton=document.querySelector("#chronoSettingsBtn");if(oldButton)oldButton.style.setProperty("display","none","important")}}
-const style=document.createElement("link");style.rel="stylesheet";style.href="/chronometers/timer-fonts.css";document.head.append(style);
-const css=document.createElement("style");css.textContent=`#surfvt-timer-gear{position:fixed;z-index:2147483647;width:20px;height:20px;border-radius:50%;border:1px solid #8ab4ff;background:#13243c;color:white;cursor:pointer;font:16px Arial;box-shadow:0 2px 9px #0008}#surfvt-timer-menu{position:fixed;z-index:2147483647;right:14px;top:14px;width:min(330px,calc(100vw - 28px));max-height:85vh;overflow:auto;background:#101827;color:#eef5ff;border:1px solid #48617f;border-radius:12px;padding:14px;font:13px system-ui;box-shadow:0 12px 36px #0009}#surfvt-timer-menu[hidden]{display:none}#surfvt-timer-menu label{display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;margin:9px 0}#surfvt-timer-menu input,#surfvt-timer-menu select,#surfvt-timer-menu button{max-width:100%;background:#1c2a3c;color:white;border:1px solid #52647a;border-radius:6px;padding:5px}#surfvt-timer-menu .colors{display:flex;gap:4px;flex-wrap:wrap}#surfvt-timer-resize{position:fixed;z-index:2147483647;width:16px;height:16px;cursor:nwse-resize;background:#58a6ff;border-radius:4px;border:2px solid white;box-sizing:border-box}`;
-document.head.append(css);
-const gear=document.createElement("button");gear.id="surfvt-timer-gear";gear.title="Configurar cronômetro";gear.textContent="⚙";document.body.append(gear);
-const menu=document.createElement("section");menu.id="surfvt-timer-menu";menu.hidden=true;menu.innerHTML='<strong>Configurações do cronômetro</strong><button data-close style="float:right">×</button><label>Cronômetro<select data-mode><option value="livesplit">LiveSplit</option><option value="chrono">Chrono</option><option value="native">Floating Clock</option></select></label><label>Modo automático<input data-auto type="checkbox"></label><label>Hotkey iniciar<input data-start maxlength="1"></label><label>Hotkey pausar<input data-pause maxlength="1"></label><label>Hotkey reiniciar<input data-reset maxlength="1"></label><label>Fonte<select data-font></select></label><label>Tamanho dos números<input data-size type="range" min="14" max="110"></label><label>Tamanho do cronômetro<input data-scale type="range" min=".5" max="2.5" step=".05"></label><label>Arredondamento<input data-radius type="range" min="0" max="32"></label><label>Estado da run<select data-state><option value="running">Rodando</option><option value="paused">Pausado</option><option value="stopped">Parado</option><option value="ended">Finalizado</option></select></label><label>Cor dos números<input data-color type="color"></label><div class="colors"></div><label>Imagem de fundo<input data-image type="file" accept="image/*"></label><button data-remove>Remover imagem</button><label>Fonte personalizada<input data-custom-font type="file" accept=".ttf,.otf,.woff,.woff2"></label><div style="margin-top:8px;opacity:.75">Arraste a alça azul no canto do cronômetro para redimensionar.</div>';
-document.body.append(menu);
-const resize=document.createElement("div");resize.id="surfvt-timer-resize";document.body.append(resize);
-const q=x=>menu.querySelector(x);
-function syncUI(){q("[data-mode]").value=s.mode;q("[data-auto]").checked=s.auto;q("[data-start]").value=s.start.toUpperCase();q("[data-pause]").value=s.pause.toUpperCase();q("[data-reset]").value=s.reset.toUpperCase();q("[data-font]").innerHTML=fonts.map(f=>'<option>'+f+'</option>').join("");q("[data-font]").value=s.font;q("[data-size]").value=s.size;q("[data-scale]").value=s.scale;q("[data-radius]").value=s.radius}
-function position(){const n=host(s.mode),r=n?.getBoundingClientRect();const enabled=window.__surfvt14TimerController?.getConfig?.().enabled!==false;gear.style.display=n&&enabled?"block":"none";resize.style.display=n&&enabled?"block":"none";if(r){gear.style.left=Math.max(0,r.left-24)+"px";gear.style.top=(r.top+4)+"px";resize.style.left=Math.max(0,r.right-10)+"px";resize.style.top=Math.max(0,r.bottom-10)+"px"}}
-gear.onclick=()=>{syncUI();menu.hidden=!menu.hidden;position()};q("[data-close]").onclick=()=>menu.hidden=true;
-q("[data-mode]").onchange=e=>{s.mode=e.target.value;save();syncUI();position()};q("[data-auto]").onchange=e=>{s.auto=e.target.checked;save()};
-for(const [sel,keyName]of [["[data-start]","start"],["[data-pause]","pause"],["[data-reset]","reset"]])q(sel).onchange=e=>{s[keyName]=(e.target.value.slice(-1)||({start:"q",pause:"q",reset:"r"}[keyName])).toLowerCase();save()};
-q("[data-font]").onchange=e=>{s.font=e.target.value;save()};q("[data-size]").oninput=e=>{s.size=+e.target.value;save()};q("[data-scale]").oninput=e=>{s.scale=+e.target.value;save()};q("[data-radius]").oninput=e=>{s.radius=+e.target.value;save()};
-const state=q("[data-state]"),color=q("[data-color]");function drawColor(){color.value=s.colors[state.value]||"#ffffff"}state.onchange=drawColor;color.oninput=()=>{s.colors[state.value]=color.value;save();palette()};
-function palette(){q(".colors").innerHTML=Object.entries(s.colors).map(([k,v])=>'<button type="button" data-c="'+k+'" title="'+k+'" style="width:25px;height:25px;background:'+v+'"></button>').join("");q(".colors").querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{state.value=b.dataset.c;drawColor()})}palette();
-q("[data-image]").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const img=new Image();img.src=await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f)});await img.decode();const c=document.createElement("canvas"),scale=Math.min(1,700/img.width);c.width=img.width*scale;c.height=img.height*scale;c.getContext("2d").drawImage(img,0,0,c.width,c.height);s.bg=c.toDataURL("image/webp",.75);save()};q("[data-remove]").onclick=()=>{s.bg="";save()};
-q("[data-custom-font]").onchange=e=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{s.customFontData=String(reader.result||"");s.font="Custom Timer Font";save();syncUI()};reader.readAsDataURL(f)};
-let drag=null;resize.onpointerdown=e=>{const n=host(s.mode);if(!n)return;drag={x:e.clientX,scale:s.scale};resize.setPointerCapture(e.pointerId);e.preventDefault()};resize.onpointermove=e=>{if(!drag)return;s.scale=Math.max(.5,Math.min(2.5,drag.scale+(e.clientX-drag.x)/140));apply();q("[data-scale]").value=s.scale;position()};resize.onpointerup=()=>{if(drag){drag=null;save()}};window.addEventListener("resize",position);setInterval(()=>{apply();position()},250);
-window.addEventListener("message",e=>{if(e.source!==parent||e.origin!==location.origin)return;const d=e.data||{};if(d.type==="SURFVT14_TIMERS_CONFIG"){s.mode=["native","chrono","livesplit"].includes(d.mode)?d.mode:s.mode;s.start=d.startHotkey||s.start;s.pause=d.pauseHotkey||s.pause;s.reset=d.resetHotkey||s.reset;s.auto=d.autoMode!==false;try{localStorage.setItem(key,JSON.stringify(s))}catch(_){}syncUI();apply();position()}});window.__surfvtTimerSettings={apply,settings:s};try{localStorage.setItem(key,JSON.stringify(s))}catch(_){}syncUI();apply();position();
+(() => {
+  "use strict";
+  if (window.__surfvtTimerSettings) return;
+  const key = "surfvt14-timer-visual-v1",
+    fonts = [
+      "System",
+      "Alike Angular",
+      "Almendra",
+      "Caudex",
+      "Chivo Black",
+      "Corben",
+      "Courgette",
+      "Cuprum",
+      "Electrolize",
+      "Federant",
+      "Forum",
+      "Kenia",
+      "Milonga",
+      "Miltonian",
+      "Oleo Script Swash Caps",
+      "PT Serif Web",
+      "Reenie Beanie",
+      "Sirin Stencil",
+      "Trochut",
+      "Yesteryear",
+    ];
+  const defaults = {
+    mode: "chrono",
+    auto: true,
+    start: "q",
+    pause: "q",
+    reset: "r",
+    scale: 1,
+    radius: 8,
+    font: "System",
+    size: 34,
+    bg: "",
+    customFontData: "",
+    colors: {
+      running: "#39d353",
+      paused: "#2196f3",
+      stopped: "#9a9a9a",
+      ended: "#ff5a5f",
+    },
+  };
+  let s;
+  try {
+    s = { ...defaults, ...JSON.parse(localStorage.getItem(key) || "{}") };
+  } catch (_) {
+    s = { ...defaults };
+  }
+  function save() {
+    try {
+      localStorage.setItem(key, JSON.stringify(s));
+    } catch (_) {}
+    window.__surfvt14TimerController?.setConfig({
+      mode: s.mode,
+      startHotkey: s.start,
+      pauseHotkey: s.pause,
+      resetHotkey: s.reset,
+      autoMode: s.auto,
+    });
+    apply();
+    window.parent.postMessage(
+      {
+        type: "SURFVT14_TIMER_SETTINGS_CHANGE",
+        changes: {
+          timerStyle: s.mode,
+          timerStartHotkey: s.start,
+          timerPauseHotkey: s.pause,
+          timerResetHotkey: s.reset,
+          timerAutoMode: s.auto,
+        },
+      },
+      "*",
+    );
+  }
+  function host(m) {
+    return m === "livesplit"
+      ? document.querySelector("#chrono")
+      : m === "chrono"
+        ? window.P14Chrono?.element
+        : window.P14FloatingClock?.element;
+  }
+  function rootOf(n) {
+    return n?.shadowRoot || document;
+  }
+  function apply() {
+    if (s.customFontData) {
+      let custom = document.getElementById("surfvt-custom-font");
+      if (!custom) {
+        custom = document.createElement("style");
+        custom.id = "surfvt-custom-font";
+        document.head.append(custom);
+      }
+      custom.textContent =
+        '@font-face{font-family:"Custom Timer Font";src:url("' +
+        s.customFontData +
+        '")}';
+    }
+    const m = s.mode,
+      n = host(m);
+    if (!n) return;
+    n.style.transform = "scale(" + s.scale + ")";
+    n.style.transformOrigin = "top left";
+    const root = rootOf(n),
+      box = m === "livesplit" ? n : root.querySelector(".timer");
+    if (!box) return;
+    box.style.setProperty("border-radius", s.radius + "px", "important");
+    box.style.setProperty("--font", '"' + s.font + '",system-ui,sans-serif');
+    box.style.fontFamily = '"' + s.font + '",system-ui,sans-serif';
+    box.style.backgroundImage = s.bg ? 'url("' + s.bg + '")' : "";
+    const st = m === "livesplit" ? document.documentElement : root;
+    const stt = m === "livesplit" ? window.chrono?.state() || {} : {};
+    const rawState =
+      m === "livesplit"
+        ? stt.timerState
+        : window[m === "chrono" ? "P14Chrono" : "P14FloatingClock"]?.state ||
+          "stopped";
+    const state = stt.pausedReason === "death" ? "ended" : rawState;
+    const color =
+      s.colors[
+        state === "running"
+          ? "running"
+          : state === "paused"
+            ? "paused"
+            : state === "ended"
+              ? "ended"
+              : "stopped"
+      ];
+    if (m === "livesplit")
+      window.chrono?.setVisualOptions?.({
+        runningColor: s.colors.running,
+        pausedColor: s.colors.paused,
+        stoppedColor: s.colors.stopped,
+        endedColor: s.colors.ended,
+      });
+    if (m === "livesplit") {
+      const h = color.replace("#", "");
+      const rgb = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+      const mix = (v, p) =>
+        Math.round(v + (p >= 0 ? 255 - v : -v) * Math.abs(p));
+      const hex = (p) =>
+        "#" + rgb.map((v) => mix(v, p).toString(16).padStart(2, "0")).join("");
+      box.style.setProperty("--chrono-top", hex(0.32));
+      box.style.setProperty("--chrono-bottom", hex(-0.22));
+    }
+    box.style.setProperty(
+      "--chrono-font-family",
+      '"' + s.font + '",system-ui,sans-serif',
+    );
+    box.style.setProperty("--chrono-running", s.colors.running);
+    box.style.setProperty("--chrono-paused", s.colors.paused);
+    box.style.setProperty("--chrono-stopped", s.colors.stopped);
+    box.style.setProperty("--col", color);
+    if (m === "chrono")
+      root.querySelectorAll(".cell").forEach((cell) => {
+        cell.style.fontSize = s.size + "px";
+        cell.style.color = color;
+      });
+    const digits = root.querySelector(
+      m === "livesplit" ? ".chrono-time" : ".time",
+    );
+    if (digits) {
+      digits.style.color = color;
+      digits.style.fontSize = s.size + "px";
+    }
+    if (m === "livesplit") {
+      const main = root.querySelector(".chrono-main"),
+        fraction = root.querySelector(".chrono-fraction");
+      main?.style.setProperty("font-size", s.size + "px", "important");
+      fraction?.style.setProperty(
+        "font-size",
+        Math.round(s.size * 0.55) + "px",
+        "important",
+      );
+      const oldButton = document.querySelector("#chronoSettingsBtn");
+      if (oldButton)
+        oldButton.style.setProperty("display", "none", "important");
+    }
+  }
+  const style = document.createElement("link");
+  style.rel = "stylesheet";
+  style.href = "/chronometers/timer-fonts.css";
+  document.head.append(style);
+  const css = document.createElement("style");
+  css.textContent = `#surfvt-timer-gear{position:fixed;z-index:2147483647;width:20px;height:20px;border-radius:50%;border:1px solid #8ab4ff;background:#13243c;color:white;cursor:pointer;font:16px Arial;box-shadow:0 2px 9px #0008}#surfvt-timer-menu{position:fixed;z-index:2147483647;right:14px;top:14px;width:min(330px,calc(100vw - 28px));max-height:85vh;overflow:auto;background:#101827;color:#eef5ff;border:1px solid #48617f;border-radius:12px;padding:14px;font:13px system-ui;box-shadow:0 12px 36px #0009}#surfvt-timer-menu[hidden]{display:none}#surfvt-timer-menu label{display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;margin:9px 0}#surfvt-timer-menu input,#surfvt-timer-menu select,#surfvt-timer-menu button{max-width:100%;background:#1c2a3c;color:white;border:1px solid #52647a;border-radius:6px;padding:5px}#surfvt-timer-menu .colors{display:flex;gap:4px;flex-wrap:wrap}#surfvt-timer-resize{position:fixed;z-index:2147483647;width:16px;height:16px;cursor:nwse-resize;background:#58a6ff;border-radius:4px;border:2px solid white;box-sizing:border-box}`;
+  document.head.append(css);
+  const gear = document.createElement("button");
+  gear.id = "surfvt-timer-gear";
+  gear.title = "Configurar cronômetro";
+  gear.textContent = "⚙";
+  document.body.append(gear);
+  const menu = document.createElement("section");
+  menu.id = "surfvt-timer-menu";
+  menu.hidden = true;
+  menu.innerHTML =
+    '<strong>Configurações do cronômetro</strong><button data-close style="float:right">×</button><label>Cronômetro<select data-mode><option value="livesplit">LiveSplit</option><option value="chrono">Chrono</option><option value="native">Floating Clock</option></select></label><label>Modo automático<input data-auto type="checkbox"></label><label>Hotkey iniciar<input data-start maxlength="1"></label><label>Hotkey pausar<input data-pause maxlength="1"></label><label>Hotkey reiniciar<input data-reset maxlength="1"></label><label>Fonte<select data-font></select></label><label>Tamanho dos números<input data-size type="range" min="14" max="110"></label><label>Tamanho do cronômetro<input data-scale type="range" min=".5" max="2.5" step=".05"></label><label>Arredondamento<input data-radius type="range" min="0" max="32"></label><label>Estado da run<select data-state><option value="running">Rodando</option><option value="paused">Pausado</option><option value="stopped">Parado</option><option value="ended">Finalizado</option></select></label><label>Cor dos números<input data-color type="color"></label><div class="colors"></div><label>Imagem de fundo<input data-image type="file" accept="image/*"></label><button data-remove>Remover imagem</button><label>Fonte personalizada<input data-custom-font type="file" accept=".ttf,.otf,.woff,.woff2"></label><div style="margin-top:8px;opacity:.75">Arraste a alça azul no canto do cronômetro para redimensionar.</div>';
+  document.body.append(menu);
+  const resize = document.createElement("div");
+  resize.id = "surfvt-timer-resize";
+  document.body.append(resize);
+  const q = (x) => menu.querySelector(x);
+  function syncUI() {
+    q("[data-mode]").value = s.mode;
+    q("[data-auto]").checked = s.auto;
+    q("[data-start]").value = s.start.toUpperCase();
+    q("[data-pause]").value = s.pause.toUpperCase();
+    q("[data-reset]").value = s.reset.toUpperCase();
+    q("[data-font]").innerHTML = fonts
+      .map((f) => "<option>" + f + "</option>")
+      .join("");
+    q("[data-font]").value = s.font;
+    q("[data-size]").value = s.size;
+    q("[data-scale]").value = s.scale;
+    q("[data-radius]").value = s.radius;
+  }
+  function position() {
+    const n = host(s.mode),
+      r = n?.getBoundingClientRect();
+    const enabled =
+      window.__surfvt14TimerController?.getConfig?.().enabled !== false;
+    gear.style.display = n && enabled ? "block" : "none";
+    resize.style.display = n && enabled ? "block" : "none";
+    if (r) {
+      gear.style.left = Math.max(0, r.left - 24) + "px";
+      gear.style.top = r.top + 4 + "px";
+      resize.style.left = Math.max(0, r.right - 10) + "px";
+      resize.style.top = Math.max(0, r.bottom - 10) + "px";
+    }
+  }
+  gear.onclick = () => {
+    syncUI();
+    menu.hidden = !menu.hidden;
+    position();
+  };
+  q("[data-close]").onclick = () => (menu.hidden = true);
+  q("[data-mode]").onchange = (e) => {
+    s.mode = e.target.value;
+    save();
+    syncUI();
+    position();
+  };
+  q("[data-auto]").onchange = (e) => {
+    s.auto = e.target.checked;
+    save();
+  };
+  for (const [sel, keyName] of [
+    ["[data-start]", "start"],
+    ["[data-pause]", "pause"],
+    ["[data-reset]", "reset"],
+  ])
+    q(sel).onchange = (e) => {
+      s[keyName] = (
+        e.target.value.slice(-1) ||
+        { start: "q", pause: "q", reset: "r" }[keyName]
+      ).toLowerCase();
+      save();
+    };
+  q("[data-font]").onchange = (e) => {
+    s.font = e.target.value;
+    save();
+  };
+  q("[data-size]").oninput = (e) => {
+    s.size = +e.target.value;
+    save();
+  };
+  q("[data-scale]").oninput = (e) => {
+    s.scale = +e.target.value;
+    save();
+  };
+  q("[data-radius]").oninput = (e) => {
+    s.radius = +e.target.value;
+    save();
+  };
+  const state = q("[data-state]"),
+    color = q("[data-color]");
+  function drawColor() {
+    color.value = s.colors[state.value] || "#ffffff";
+  }
+  state.onchange = drawColor;
+  color.oninput = () => {
+    s.colors[state.value] = color.value;
+    save();
+    palette();
+  };
+  function palette() {
+    q(".colors").innerHTML = Object.entries(s.colors)
+      .map(
+        ([k, v]) =>
+          '<button type="button" data-c="' +
+          k +
+          '" title="' +
+          k +
+          '" style="width:25px;height:25px;background:' +
+          v +
+          '"></button>',
+      )
+      .join("");
+    q(".colors")
+      .querySelectorAll("[data-c]")
+      .forEach(
+        (b) =>
+          (b.onclick = () => {
+            state.value = b.dataset.c;
+            drawColor();
+          }),
+      );
+  }
+  palette();
+  q("[data-image]").onchange = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const img = new Image();
+    img.src = await new Promise((res) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(f);
+    });
+    await img.decode();
+    const c = document.createElement("canvas"),
+      scale = Math.min(1, 700 / img.width);
+    c.width = img.width * scale;
+    c.height = img.height * scale;
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    s.bg = c.toDataURL("image/webp", 0.75);
+    save();
+  };
+  q("[data-remove]").onclick = () => {
+    s.bg = "";
+    save();
+  };
+  q("[data-custom-font]").onchange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      s.customFontData = String(reader.result || "");
+      s.font = "Custom Timer Font";
+      save();
+      syncUI();
+    };
+    reader.readAsDataURL(f);
+  };
+  let drag = null;
+  resize.onpointerdown = (e) => {
+    const n = host(s.mode);
+    if (!n) return;
+    drag = { x: e.clientX, scale: s.scale };
+    resize.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  resize.onpointermove = (e) => {
+    if (!drag) return;
+    s.scale = Math.max(
+      0.5,
+      Math.min(2.5, drag.scale + (e.clientX - drag.x) / 140),
+    );
+    apply();
+    q("[data-scale]").value = s.scale;
+    position();
+  };
+  resize.onpointerup = () => {
+    if (drag) {
+      drag = null;
+      save();
+    }
+  };
+  window.addEventListener("resize", position);
+  setInterval(() => {
+    apply();
+    position();
+  }, 250);
+  window.addEventListener("message", (e) => {
+    if (e.source !== parent || e.origin !== location.origin) return;
+    const d = e.data || {};
+    if (d.type === "SURFVT14_TIMERS_CONFIG") {
+      s.mode = ["native", "chrono", "livesplit"].includes(d.mode)
+        ? d.mode
+        : s.mode;
+      s.start = d.startHotkey || s.start;
+      s.pause = d.pauseHotkey || s.pause;
+      s.reset = d.resetHotkey || s.reset;
+      s.auto = d.autoMode !== false;
+      try {
+        localStorage.setItem(key, JSON.stringify(s));
+      } catch (_) {}
+      syncUI();
+      apply();
+      position();
+    }
+  });
+  const initial = window.__surfvt14TimerController?.getConfig();
+  if (initial) {
+    s.mode = initial.mode;
+    s.start = initial.startHotkey;
+    s.pause = initial.pauseHotkey;
+    s.reset = initial.resetHotkey;
+    s.auto = initial.autoMode !== false;
+  }
+  window.__surfvtTimerSettings = { apply, settings: s };
+  try {
+    localStorage.setItem(key, JSON.stringify(s));
+  } catch (_) {}
+  syncUI();
+  apply();
+  position();
 })();

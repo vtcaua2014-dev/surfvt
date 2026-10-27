@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <script src="/chronometers/input-bridge.js"></script>
+  <script src="./touch-input.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
   <title>Subway Surfers Map</title>
@@ -14,7 +16,7 @@
 
 
 </style>
-  <script src="./4399.z.js?v=surfvt14-5"></script>
+  <script src="./4399.z.js?v=surfvt14-6"></script>
   <script src="./UnityLoader.2019.2.js?v=surfvt14-4"></script>
   <script src="./unlock-all.js"></script>
   <script src="./infinite-save.js"></script>
@@ -37,80 +39,23 @@
 
       // Atalhos inspirados no WASD.ahk enviado: W/A/S/D viram as quatro setas
       // antes de chegar ao canvas Unity. As setas nativas continuam funcionando.
-      (function installKeyboardBridge() {
-        var codes = { ArrowUp: 38, ArrowLeft: 37, ArrowDown: 40, ArrowRight: 39 };
-        var movement = { w: 'ArrowUp', a: 'ArrowLeft', s: 'ArrowDown', d: 'ArrowRight' };
-        try {
-          var rawSettings = params.get('hubSettings');
-          var settings = rawSettings ? JSON.parse(rawSettings) : {};
-          var scheme = settings.controls || 'WASD';
-          if (scheme === 'IJKL') movement = { i: 'ArrowUp', j: 'ArrowLeft', k: 'ArrowDown', l: 'ArrowRight' };
-          else if (scheme === 'SETAS') movement = { arrowup: 'ArrowUp', arrowleft: 'ArrowLeft', arrowdown: 'ArrowDown', arrowright: 'ArrowRight' };
-          else if (scheme === 'PERSONALIZADO') {
-            var custom = settings.customControls || {};
-            movement = {};
-            movement[String(custom.up || 'T').toLowerCase()] = 'ArrowUp';
-            movement[String(custom.left || 'F').toLowerCase()] = 'ArrowLeft';
-            movement[String(custom.down || 'G').toLowerCase()] = 'ArrowDown';
-            movement[String(custom.right || 'H').toLowerCase()] = 'ArrowRight';
-          }
-        } catch (e) {}
-        function normalize(value) {
-          var key = String(value || '').toLowerCase();
-          return ({ '↑': 'arrowup', '←': 'arrowleft', '↓': 'arrowdown', '→': 'arrowright' })[key] || key;
-        }
-        function makeEvent(type, mapped, repeat) {
-          var synthetic = new KeyboardEvent(type, { key: mapped, code: mapped, bubbles: true, cancelable: true, repeat: !!repeat });
-          try {
-            Object.defineProperty(synthetic, 'keyCode', { value: codes[mapped] || 0 });
-            Object.defineProperty(synthetic, 'which', { value: codes[mapped] || 0 });
-            Object.defineProperty(synthetic, '__surfVT14Forwarded', { value: true });
-          } catch (e) {}
-          return synthetic;
-        }
-        function forward(event) {
-          if (event.__surfVT14Forwarded) return;
-          var key = normalize(event.key);
-          if (!event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target && event.target.tagName || '')) {
-            announce('SURFVT14_KEY_VISUAL', { key: event.key, down: event.type === 'keydown' });
-          }
-          if (key === 'q' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_TOGGLE'); event.preventDefault(); return; }
-          if (key === 'r' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_RESET'); event.preventDefault(); return; }
-          var mapped = movement[key];
-          if (!mapped) return;
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          var synthetic = makeEvent(event.type, mapped, event.repeat);
-          dispatchToUnity(synthetic);
-        }
-        window.addEventListener('message', function(event) {
-          var data = event.data || {};
-          if (data.type !== 'SURFVT14_KEY') return;
-          var mapped = data.key || '';
-          var synthetic = makeEvent(data.eventType || 'keydown', mapped, data.repeat);
-          dispatchToUnity(synthetic);
-        });
-        window.addEventListener('keydown', forward, true);
-        window.addEventListener('keyup', forward, true);
-        function dispatchToUnity(event) {
-          var canvas = document.querySelector('canvas');
-          // Unity 2019 registra o teclado no document/window. O dispatch no
-          // document também borbulha até window, sem depender de o canvas
-          // possuir foco ou de o clique ter ocorrido dentro do WebGL.
-          try { document.dispatchEvent(event); } catch (e) {
-            try { window.dispatchEvent(event); } catch (ignored) {}
-          }
-          if (canvas) {
-            try { canvas.focus(); } catch (e) {}
-          }
-        }
-      })();
+      // Physical keyboard and touch messages are handled by input-bridge.js.
 
       // ---- Ponte Poki -> Unity -------------------------------------------------
       // O build original usa o Poki SDK para liberar a inicialização do jogo.
       // Mesmo em modo local/offline, o Unity precisa receber o sinal "ready"
       // depois que initPokiBridge() for chamado. Sem isso o jogo pode ficar preso
       // na tela de dica/loading mesmo com os arquivos WebGL já baixados.
+      // The 2018 Bangkok runtime has Application.OpenURL. Its packaged host
+      // check must never navigate this embedded map to another Poki game.
+      window.__blockUnityExternalOpenURL = function (value) {
+        var target;
+        try { target = new URL(String(value), location.href); } catch (e) { return true; }
+        if (target.origin === location.origin && /^https?:$/.test(target.protocol)) return false;
+        console.warn('[surfvt14] Blocked Bangkok external navigation:', String(value));
+        announce('SURFVT14_BLOCKED_NAVIGATION', { url: String(value) });
+        return true;
+      };
       var bridgeName = null;
       var BRIDGE_FALLBACKS = ['PokiUnitySDK', 'PokiSDK'];
       var pokiReady = false;
@@ -133,7 +78,9 @@
       function notifyPokiReady() {
         if (!pokiReady || !bridgeName) return;
         // É o callback usado pelo Poki/Unity original.
-        sendToUnity('ready');
+        // The build registers its actual scene GameObject here, including the
+        // original age/consent screen. Waiting for mainMenu would block that UI.
+        if (sendToUnity('ready')) scheduleStartupReveal();
       }
 
       function afterPromise(promiseLike, done) {
@@ -237,11 +184,11 @@
         },
         setDebug: function () {},
         commercialBreak: noResult,
-        customEvent: noResult,
+        customEvent: function (noun, verb) { if (noun === 'mainMenu' && verb === 'interactive') scheduleStartupReveal(); return Promise.resolve(); },
         destroyAd: function () {},
         displayAd: function () {},
-        gameInteractive: function () {},
-        gameLoadingFinished: function () {},
+        gameInteractive: function () { scheduleStartupReveal(); },
+        gameLoadingFinished: function () { scheduleStartupReveal(); },
         gameLoadingProgress: function () {},
         gameLoadingStart: function () {},
         gameplayStart: function () {},
@@ -346,38 +293,15 @@
         if (startupRevealScheduled) return;
         startupRevealScheduled = true;
         window.setTimeout(function () {
-          try { finishStartup(); } catch (e) { revealGame(); }
+          try { finishStartup(); } catch (e) { reportBuildError(e); }
         }, 350);
       }
 
       function finishStartup() {
-        if (store('get', saveReloadKey) === '1') {
-          store('remove', saveReloadKey);
-          revealGame();
-          return;
-        }
-        var attempts = 0;
-        function trySave() {
-          attempts += 1;
-          withTimeout(prepareSave(), 4000, [{ ready: false }]).then(function (results) {
-            var unlockResult = results[0];
-            if (unlockResult && unlockResult.ready && unlockResult.hashes) {
-              // O Unity já está inicializado; o save foi gravado no IndexedDB e será
-              // usado na próxima inicialização. Recarregar o iframe aqui fazia a
-              // instalação voltar ao loading e podia criar um loop em navegadores
-              // que particionam sessionStorage dentro de iframes.
-              revealGame();
-              return;
-            }
-            if (attempts < 12) {
-              document.getElementById('mode').textContent = modeName + ' · preparando save completo';
-              window.setTimeout(trySave, 250);
-            } else {
-              revealGame();
-            }
-          }).catch(revealGame);
-        }
-        trySave();
+        // Readiness comes from the build's SDK lifecycle, never from save writes.
+        // Keep existing saves/unlocks, but do not hold the menu behind their retries.
+        prepareSave().catch(function (error) { console.warn('[surfvt14] Save refresh', error); });
+        revealGame();
       }
 
       (function installHubRuntimeBridge() {
@@ -415,8 +339,7 @@
           document.getElementById('fill').style.width = '0%';
           document.getElementById('percent').textContent = '0%';
           setStatus('TENTANDO NOVAMENTE', false);
-          var game = document.getElementById('game'); game.innerHTML = ''; window.unityInstance = null;
-          startUnity();
+          location.reload();
         });
       })();
       function startUnity() {
@@ -431,16 +354,20 @@
             return response.arrayBuffer();
           }).then(function (wasmBinary) {
             window.unityGame = window.unityInstance = UnityLoader.instantiate('game', configPath, {
-            Module: { wasmBinary: wasmBinary, wasmTableSize: 125739, instantiateWasm: function (imports, receive) { WebAssembly.instantiate(wasmBinary, imports).then(function (result) { receive(result.instance, result.module); }).catch(function (error) { reportBuildError(error); }); return {}; }, onRuntimeInitialized: function () { setStatus('PREPARANDO A PISTA', false); pokiReady = true; window.pokiReady = true; if (!bridgeName) bridgeName = 'PokiUnitySDK'; notifyPokiReady(); try { window.PokiSDK.gameLoadingFinished(); } catch (e) {} } },
-            onProgress: function (_, value) { var raw = Number(value) || 0; var progress = Math.max(0, Math.min(1, raw > 1 ? raw / 100 : raw)); document.getElementById('fill').style.width = Math.round(progress * 100) + '%'; document.getElementById('percent').textContent = Math.round(progress * 100) + '%'; announce('SURFVT14_GAME_PROGRESS', { progress: progress }); if (progress >= 1) { setStatus('PREPARANDO A PISTA', false); if (!watchdogArmed) { watchdogArmed = true; window.setTimeout(function () { if (!announcedReady) { console.warn('[surfvt14] Unity nao confirmou a inicializacao a tempo; liberando a tela.'); revealGame(); } }, 45000); } if (isMobile && !window.__mobileWatchdogArmed) { window.__mobileWatchdogArmed = true; window.setTimeout(function () { if (!announcedReady) { console.warn('[surfvt14] watchdog mobile: liberando apos downloads concluidos.'); revealGame(); } }, 15000); } } },
-            onsuccess: function () { scheduleStartupReveal(); },
+            Module: { wasmBinary: wasmBinary, wasmTableSize: 125739, instantiateWasm: function (imports, receive) { WebAssembly.instantiate(wasmBinary, imports).then(function (result) { receive(result.instance, result.module); }).catch(function (error) { reportBuildError(error); }); return {}; }, onRuntimeInitialized: function () { setStatus('PREPARANDO A PISTA', false); } },
+            onProgress: function (_, value) {
+              var raw = Number(value) || 0;
+              var progress = Math.max(0, Math.min(1, raw > 1 ? raw / 100 : raw));
+              document.getElementById('fill').style.width = Math.round(progress * 100) + '%';
+              document.getElementById('percent').textContent = Math.round(progress * 100) + '%';
+              announce('SURFVT14_GAME_PROGRESS', { progress: progress });
+              if (progress >= 1) setStatus('AGUARDANDO O MENU DO JOGO', false);
+            },
+            onsuccess: function () { setStatus('AGUARDANDO O MENU DO JOGO', false); },
             onerror: reportBuildError
             });
             window.setTimeout(function () {
-              if (!announcedReady && window.unityInstance) {
-                console.warn('[surfvt14] watchdog de inicializacao prolongada; liberando a tela.');
-                revealGame();
-              }
+              if (!announcedReady) reportBuildError(new Error('Unity não confirmou o menu pelo SDK em 90 segundos. Verifique o console e tente novamente.'));
             }, 90000);
           });
         }).catch(reportBuildError);
@@ -449,7 +376,7 @@
       startUnity();
 
       addEventListener('message', function (event) {
-        if (event.data && event.data.type === 'SURFVT14_GAME_INFO') announce('SURFVT14_GAME_READY');
+        if (event.source === parent && event.origin === location.origin && event.data && event.data.type === 'SURFVT14_GAME_INFO' && announcedReady) announce('SURFVT14_GAME_READY');
       });
     })();
   </script>

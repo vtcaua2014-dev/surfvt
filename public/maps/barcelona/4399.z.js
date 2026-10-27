@@ -2278,12 +2278,10 @@ var my4399UnityModule = (function() {
         }
 
         function _JS_Eval_EvalJS(ptr) {
-            // var str = Pointer_stringify(ptr);
-            // try {
-            //     eval(str)
-            // } catch (exception) {
-            //     console.error(exception)
-            // }
+            // These builds invoke Poki initialization and lifecycle calls through
+            // Application.ExternalEval. A no-op here prevents SDK.ready forever.
+            var str = Pointer_stringify(ptr);
+            try { eval(str); } catch (exception) { console.error(exception); }
         }
 
         function _JS_Eval_OpenURL(ptr) {

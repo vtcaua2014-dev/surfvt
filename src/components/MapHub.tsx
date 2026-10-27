@@ -460,7 +460,8 @@ type HubSettings = {
   timerAutoMode: boolean;
   autoBoostEnabled: boolean;
   autoBoostHotkey: string;
-  autoBoostCorner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
+  autoBoostCorner:
+    "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
   autoBoostCount: number;
   autoBoostDelay: number;
   wasdEnabled: boolean;
@@ -1053,8 +1054,6 @@ const externalTimerFiles = [
   ["chrono", "/chronometers/chrono.js"],
   ["native", "/chronometers/floatingclock.js"],
   ["controller", "/chronometers/timer-controller.js"],
-  ["keystrokes", "/chronometers/keystrokes.js"],
-  ["settings", "/chronometers/timer-settings.js"],
 ] as const;
 const externalTimerLoads = new WeakMap<Document, Promise<void>>();
 const externalTimerVersions = new WeakMap<Document, number>();
@@ -1067,22 +1066,36 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
     if (!head) throw new Error("Iframe sem documentElement");
     const cover = doc.createElement("style");
     cover.id = "surfvt14-timer-preload-hide";
-    cover.textContent = "#chrono,#p14-chrono,#p14-floatingclock{visibility:hidden!important}";
+    cover.textContent =
+      "#chrono,#p14-chrono,#p14-floatingclock{visibility:hidden!important}";
     head.appendChild(cover);
     try {
       for (const [name, src] of externalTimerFiles) {
-        const existing = doc.querySelector<HTMLScriptElement>(`script[data-surfvt14-timer="${name}"][data-loaded="true"]`);
-        if (existing?.dataset.loaded === "true") continue;
+        const existing = doc.querySelector<HTMLScriptElement>(
+          `script[data-surfvt14-timer="${name}"][data-loaded="true"]`,
+        );
+        if (existing?.dataset["loaded"] === "true") continue;
         const script = existing || doc.createElement("script");
         script.src = src;
-        script.dataset.surfvt14Timer = name;
+        script.dataset["surfvt14Timer"] = name;
         await new Promise<void>((resolve, reject) => {
-          script.onload = () => { script.dataset.loaded = "true"; resolve(); };
-          script.onerror = () => { script.remove(); reject(new Error(`Falha ao carregar ${src}`)); };
+          script.onload = () => {
+            script.dataset["loaded"] = "true";
+            resolve();
+          };
+          script.onerror = () => {
+            script.remove();
+            reject(new Error(`Falha ao carregar ${src}`));
+          };
           if (!existing) head.appendChild(script);
         });
       }
-      if (!(doc.defaultView as (Window & { __surfvt14TimerController?: unknown }) | null)?.__surfvt14TimerController) {
+      if (
+        !(
+          doc.defaultView as
+            (Window & { __surfvt14TimerController?: unknown }) | null
+        )?.__surfvt14TimerController
+      ) {
         throw new Error("Controlador de cronômetros não inicializou");
       }
     } finally {
@@ -1097,30 +1110,71 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
   return task;
 }
 
-function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[], isDesktop: boolean) {
+function configureExternalTimers(
+  doc: Document,
+  enabled: boolean,
+  settings: HubSettings,
+  controlKeys: string[],
+  isDesktop: boolean,
+) {
   const gameWindow = doc.defaultView;
-  if (!gameWindow || doc.URL === "about:blank") return;
+  if (
+    !gameWindow ||
+    doc.URL === "about:blank" ||
+    !doc.documentElement?.isConnected
+  )
+    return;
   const version = (externalTimerVersions.get(doc) || 0) + 1;
   externalTimerVersions.set(doc, version);
   // A visualização das teclas é React tanto no desktop como no celular.
   // A ponte interna permanece responsável apenas pelos eventos reais do jogo.
   const send = () => {
-    if (doc.defaultView !== gameWindow || !doc.documentElement?.isConnected || externalTimerVersions.get(doc) !== version) return;
+    if (
+      doc.defaultView !== gameWindow ||
+      !doc.documentElement?.isConnected ||
+      externalTimerVersions.get(doc) !== version
+    )
+      return;
     gameWindow.postMessage(
-      { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: false, controlKeys },
+      {
+        type: "SURFVT14_TIMERS_CONFIG",
+        enabled,
+        mode: settings.timerStyle,
+        startHotkey: settings.timerStartHotkey,
+        pauseHotkey: settings.timerPauseHotkey,
+        resetHotkey: settings.timerResetHotkey,
+        autoMode: settings.timerAutoMode,
+        wasdEnabled: false,
+        controlKeys,
+      },
       window.location.origin,
     );
   };
-  void ensureExternalTimerScripts(doc).then(send).catch((error) => {
-    console.error("[SurfVT14] Falha na configuração dos cronômetros:", error);
-  });
+  void ensureExternalTimerScripts(doc)
+    .then(() => {
+      send();
+      // Customization UI must never hold timer visibility behind another download.
+      if (!doc.querySelector('script[data-surfvt14-timer="settings"]')) {
+        const script = doc.createElement("script");
+        script.src = "/chronometers/timer-settings.js";
+        script.dataset["surfvt14Timer"] = "settings";
+        script.onerror = () => {
+          script.remove();
+          console.error("[SurfVT14] Falha ao carregar o menu dos cronômetros");
+        };
+        (doc.head || doc.documentElement).appendChild(script);
+      }
+    })
+    .catch((error) => {
+      console.error("[SurfVT14] Falha na configuração dos cronômetros:", error);
+    });
 }
 
 type GamePlayerProps = {
   map: MapId;
   mapPath: string;
-  mapDownloadUrl?: string;
-  downloadOnly?: boolean;
+  mapDownloadUrl?: string | undefined;
+  downloadOnly?: boolean | undefined;
   isVisible: boolean;
   onClose: () => void;
   onProgress: (progress: number) => void;
@@ -1128,7 +1182,18 @@ type GamePlayerProps = {
   onError: (message: string) => void;
   errorMessage: string | null;
   settings: HubSettings;
-  onTimerSettingsChange: (changes: Partial<Pick<HubSettings, "timerStyle" | "timerStartHotkey" | "timerPauseHotkey" | "timerResetHotkey" | "timerAutoMode">>) => void;
+  onTimerSettingsChange: (
+    changes: Partial<
+      Pick<
+        HubSettings,
+        | "timerStyle"
+        | "timerStartHotkey"
+        | "timerPauseHotkey"
+        | "timerResetHotkey"
+        | "timerAutoMode"
+      >
+    >,
+  ) => void;
   veniceVariant?: VeniceVariant;
 };
 
@@ -1153,6 +1218,9 @@ function GamePlayer({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const soundcloudRef = useRef<HTMLIFrameElement>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
+  const [pressedKeys, setPressedKeys] = useState<string[]>([]);
+  // Keep the launch URL stable: live preferences travel through postMessage.
+  const [launchSettings] = useState(() => JSON.stringify(settings));
   const [isDesktop, setIsDesktop] = useState(false);
   const [soundcloudPosition, setSoundcloudPosition] = useState(0);
   const activeControlKey = useRef<string | null>(null);
@@ -1162,12 +1230,36 @@ function GamePlayer({
   });
   useEffect(() => {
     const onTimerSettings = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow || event.data?.type !== "SURFVT14_TIMER_SETTINGS_CHANGE") return;
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== frameRef.current?.contentWindow ||
+        event.data?.type !== "SURFVT14_TIMER_SETTINGS_CHANGE"
+      )
+        return;
       const changes = event.data.changes || {};
-      const patch: Partial<Pick<HubSettings, "timerStyle" | "timerStartHotkey" | "timerPauseHotkey" | "timerResetHotkey" | "timerAutoMode">> = {};
-      if (["native", "chrono", "livesplit"].includes(changes.timerStyle)) patch.timerStyle = changes.timerStyle;
-      for (const key of ["timerStartHotkey", "timerPauseHotkey", "timerResetHotkey"] as const) if (typeof changes[key] === "string" && changes[key].length <= 1) patch[key] = changes[key].toLowerCase() || (key === "timerResetHotkey" ? "r" : "q");
-      if (typeof changes.timerAutoMode === "boolean") patch.timerAutoMode = changes.timerAutoMode;
+      const patch: Partial<
+        Pick<
+          HubSettings,
+          | "timerStyle"
+          | "timerStartHotkey"
+          | "timerPauseHotkey"
+          | "timerResetHotkey"
+          | "timerAutoMode"
+        >
+      > = {};
+      if (["native", "chrono", "livesplit"].includes(changes.timerStyle))
+        patch.timerStyle = changes.timerStyle;
+      for (const key of [
+        "timerStartHotkey",
+        "timerPauseHotkey",
+        "timerResetHotkey",
+      ] as const)
+        if (typeof changes[key] === "string" && changes[key].length <= 1)
+          patch[key] =
+            changes[key].toLowerCase() ||
+            (key === "timerResetHotkey" ? "r" : "q");
+      if (typeof changes.timerAutoMode === "boolean")
+        patch.timerAutoMode = changes.timerAutoMode;
       if (Object.keys(patch).length) onTimerSettingsChange(patch);
     };
     window.addEventListener("message", onTimerSettings);
@@ -1181,7 +1273,8 @@ function GamePlayer({
   useEffect(() => {
     if (!timerCompatible || !isVisible) {
       const doc = frameRef.current?.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings, controlKeys, isDesktop);
+      if (doc)
+        configureExternalTimers(doc, false, settings, controlKeys, isDesktop);
       return;
     }
     const frame = frameRef.current;
@@ -1189,7 +1282,13 @@ function GamePlayer({
     const sync = () => {
       const doc = frame.contentDocument;
       if (!doc || doc.URL === "about:blank") return;
-      configureExternalTimers(doc, settings.timerEnabled, settings, controlKeys, isDesktop);
+      configureExternalTimers(
+        doc,
+        settings.timerEnabled,
+        settings,
+        controlKeys,
+        isDesktop,
+      );
     };
     frame.addEventListener("load", sync);
     sync();
@@ -1198,20 +1297,57 @@ function GamePlayer({
       // Mudanças de preferências recriam este effect; não enfileirar uma
       // configuração "disabled" que pode chegar DEPOIS da nova configuração.
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey, settings.timerAutoMode, settings.wasdEnabled, settings.controls, settings.customControls.up, settings.customControls.left, settings.customControls.down, settings.customControls.right, isDesktop]);
+  }, [
+    timerCompatible,
+    isVisible,
+    settings.timerEnabled,
+    settings.timerStyle,
+    settings.timerStartHotkey,
+    settings.timerPauseHotkey,
+    settings.timerResetHotkey,
+    settings.timerAutoMode,
+    settings.wasdEnabled,
+    settings.controls,
+    settings.customControls.up,
+    settings.customControls.left,
+    settings.customControls.down,
+    settings.customControls.right,
+    isDesktop,
+  ]);
 
   useEffect(() => {
     if (!timerCompatible || !isVisible || !settings.timerEnabled) return;
-    const sendCommand = (action: "toggle" | "start" | "pause" | "reset") => frameRef.current?.contentWindow?.postMessage({ type: "SURFVT14_TIMER_COMMAND", action }, window.location.origin);
+    const sendCommand = (action: "toggle" | "start" | "pause" | "reset") =>
+      frameRef.current?.contentWindow?.postMessage(
+        { type: "SURFVT14_TIMER_COMMAND", action },
+        window.location.origin,
+      );
     const onKey = (event: KeyboardEvent) => {
-      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey)
+        return;
       const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      )
+        return;
       const key = event.key.toLowerCase();
-      const start = settings.timerStartHotkey.toLowerCase(), pause = settings.timerPauseHotkey.toLowerCase(), reset = settings.timerResetHotkey.toLowerCase();
+      const start = settings.timerStartHotkey.toLowerCase(),
+        pause = settings.timerPauseHotkey.toLowerCase(),
+        reset = settings.timerResetHotkey.toLowerCase();
       if (![start, pause, reset].includes(key)) return;
       event.preventDefault();
-      sendCommand(start === pause && key === start ? "toggle" : key === start ? "start" : key === pause ? "pause" : "reset");
+      sendCommand(
+        start === pause && key === start
+          ? "toggle"
+          : key === start
+            ? "start"
+            : key === pause
+              ? "pause"
+              : "reset",
+      );
     };
     const toggleEvent = () => sendCommand("toggle");
     const resetEvent = () => sendCommand("reset");
@@ -1223,7 +1359,14 @@ function GamePlayer({
       window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggleEvent);
       window.removeEventListener("SURFVT14_TIMER_RESET", resetEvent);
     };
-  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStartHotkey, settings.timerPauseHotkey, settings.timerResetHotkey]);
+  }, [
+    timerCompatible,
+    isVisible,
+    settings.timerEnabled,
+    settings.timerStartHotkey,
+    settings.timerPauseHotkey,
+    settings.timerResetHotkey,
+  ]);
 
   const customControlKeys = [
     settings.customControls.up,
@@ -1265,7 +1408,8 @@ function GamePlayer({
       bottomRight: [rect.right - inset, rect.bottom - inset],
       center: [rect.left + rect.width / 2, rect.top + rect.height / 2],
     };
-    const [clientX, clientY] = points[settings.autoBoostCorner] ?? points.bottomLeft;
+    const [clientX, clientY] =
+      points[settings.autoBoostCorner] ?? points["bottomLeft"]!;
     // Dispatch on the canvas itself. On mobile, elementFromPoint can return a
     // Unity child surface that does not have the WebGL input handlers attached.
     const target = canvas as HTMLElement;
@@ -1294,7 +1438,9 @@ function GamePlayer({
       // desktop builds listen to mouse/pointer events. Send both families.
       try {
         target.dispatchEvent(new PointerEvent("pointerdown", pointerInit));
-      } catch (_) {}
+      } catch (_) {
+        /* Optional pointer APIs may be unavailable in WebViews. */
+      }
       target.dispatchEvent(new MouseEvent("mousedown", mouse));
       try {
         target.dispatchEvent(
@@ -1304,11 +1450,18 @@ function GamePlayer({
             pressure: 0,
           }),
         );
-      } catch (_) {}
+      } catch (_) {
+        /* Optional pointer APIs may be unavailable in WebViews. */
+      }
       target.dispatchEvent(new MouseEvent("mouseup", { ...mouse, buttons: 0 }));
       target.dispatchEvent(new MouseEvent("click", mouse));
     };
-    Array.from({ length: Math.max(1, Math.min(10, Number(settings.autoBoostCount) || 3)) }, (_, index) => index * Math.max(10, Number(settings.autoBoostDelay) || 60)).forEach((delay) => window.setTimeout(click, delay));
+    Array.from(
+      {
+        length: Math.max(1, Math.min(10, Number(settings.autoBoostCount) || 3)),
+      },
+      (_, index) => index * Math.max(10, Number(settings.autoBoostDelay) || 60),
+    ).forEach((delay) => window.setTimeout(click, delay));
   };
 
   useEffect(() => {
@@ -1319,45 +1472,76 @@ function GamePlayer({
     );
   }, []);
 
-
   // O foco do teclado pode estar DENTRO do iframe. Eventos não sobem para
   // window.parent, portanto o painel React observa também o documento do jogo.
   useEffect(() => {
     if (!isVisible || downloadOnly) return;
     const frame = frameRef.current;
     if (!frame) return;
-    const normalize = (key: string) => ({ ArrowUp: "↑", ArrowLeft: "←", ArrowDown: "↓", ArrowRight: "→" } as Record<string, string>)[key] || key.toUpperCase();
+    const normalize = (key: string) =>
+      (
+        ({
+          ArrowUp: "↑",
+          ArrowLeft: "←",
+          ArrowDown: "↓",
+          ArrowRight: "→",
+        }) as Record<string, string>
+      )[key] || key.toUpperCase();
     const held = new Set<string>();
     const track = (event: KeyboardEvent) => {
+      if (!event.isTrusted) return;
       const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
-          target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      )
+        return;
       const key = normalize(event.key);
-      if (!controlKeys.some((control) => control.toUpperCase() === key.toUpperCase())) return;
+      if (
+        !controlKeys.some(
+          (control) => control.toUpperCase() === key.toUpperCase(),
+        )
+      )
+        return;
       if (event.type === "keydown") held.add(key);
       else held.delete(key);
       const keys = [...held];
-      setPressedKey(keys.length ? keys[keys.length - 1] : null);
+      setPressedKeys(keys);
     };
     const onFrameKey = (event: MessageEvent) => {
-      if (event.source !== frame.contentWindow || event.origin !== window.location.origin || event.data?.type !== "SURFVT14_KEY_VISUAL") return;
+      if (
+        event.source !== frame.contentWindow ||
+        event.origin !== window.location.origin ||
+        event.data?.type !== "SURFVT14_KEY_VISUAL"
+      )
+        return;
+      if (event.data.clear) {
+        clear();
+        return;
+      }
       const key = normalize(String(event.data.key || ""));
-      if (!controlKeys.some((control) => control.toUpperCase() === key.toUpperCase())) return;
-      if (event.data.down) held.add(key); else held.delete(key);
+      if (
+        !controlKeys.some(
+          (control) => control.toUpperCase() === key.toUpperCase(),
+        )
+      )
+        return;
+      if (event.data.down) held.add(key);
+      else held.delete(key);
       const keys = [...held];
-      setPressedKey(keys.length ? keys[keys.length - 1] : null);
+      setPressedKeys(keys);
     };
-    const clear = () => { held.clear(); setPressedKey(null); };
-    let frameDoc: Document | null = null;
+    const clear = () => {
+      held.clear();
+      setPressedKeys([]);
+    };
     let frameWindow: Window | null = null;
     const attach = () => {
-      frameDoc?.removeEventListener("keydown", track, true);
-      frameDoc?.removeEventListener("keyup", track, true);
       frameWindow?.removeEventListener("blur", clear);
-      try { frameDoc = frame.contentDocument; frameWindow = frame.contentWindow; }
-      catch { frameDoc = null; frameWindow = null; }
-      frameDoc?.addEventListener("keydown", track, true);
-      frameDoc?.addEventListener("keyup", track, true);
+      frameWindow = frame.contentWindow;
+      // The early iframe bridge reports physical keys before game listeners intercept them.
       frameWindow?.addEventListener("blur", clear);
       clear();
     };
@@ -1373,8 +1557,6 @@ function GamePlayer({
       window.removeEventListener("keyup", track, true);
       window.removeEventListener("blur", clear);
       frame.removeEventListener("load", attach);
-      frameDoc?.removeEventListener("keydown", track, true);
-      frameDoc?.removeEventListener("keyup", track, true);
       frameWindow?.removeEventListener("blur", clear);
     };
   }, [isVisible, downloadOnly, settings.controls, settings.customControls]);
@@ -1519,17 +1701,71 @@ function GamePlayer({
       window.removeEventListener("keydown", handleAutoBoost, true);
       window.removeEventListener("message", handleGameKey);
     };
-  }, [map, settings.autoBoostEnabled, settings.autoBoostHotkey, settings.autoBoostCorner, settings.autoBoostCount, settings.autoBoostDelay]);
+  }, [
+    map,
+    settings.autoBoostEnabled,
+    settings.autoBoostHotkey,
+    settings.autoBoostCorner,
+    settings.autoBoostCount,
+    settings.autoBoostDelay,
+  ]);
 
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
     const profiles: Partial<Record<GraphicsMode, Record<string, unknown>>> = {
-      performance: { dpr: 0.75, aa: false, power: "high-performance", q: 0, look: null, sharp: 0, vignette: 0, auto: { target: 55, warm: 4000, every: 2500, window: 1500, steps: [1, 0.83, 0.68, 0.56, 0.47] } },
-      low: { dpr: 0.5, aa: false, power: "low-power", q: 0, look: { b: 0.97, c: 0.94, s: 0.88 }, sharp: 0, vignette: 0 },
-      medium: { dpr: 1, aa: true, power: "default", q: 1, look: { b: 1, c: 1.04, s: 1.06 }, sharp: 0, vignette: 0 },
-      high: { dpr: 1.5, aa: true, power: "high-performance", q: 2, look: { b: 1.02, c: 1.08, s: 1.18 }, sharp: 1, vignette: 0 },
-      ultra: { dpr: 2, aa: true, power: "high-performance", q: 2, look: { b: 1.03, c: 1.1, s: 1.25 }, sharp: 2, vignette: 0.22 },
+      performance: {
+        dpr: 0.75,
+        aa: false,
+        power: "high-performance",
+        q: 0,
+        look: null,
+        sharp: 0,
+        vignette: 0,
+        auto: {
+          target: 55,
+          warm: 4000,
+          every: 2500,
+          window: 1500,
+          steps: [1, 0.83, 0.68, 0.56, 0.47],
+        },
+      },
+      low: {
+        dpr: 0.5,
+        aa: false,
+        power: "low-power",
+        q: 0,
+        look: { b: 0.97, c: 0.94, s: 0.88 },
+        sharp: 0,
+        vignette: 0,
+      },
+      medium: {
+        dpr: 1,
+        aa: true,
+        power: "default",
+        q: 1,
+        look: { b: 1, c: 1.04, s: 1.06 },
+        sharp: 0,
+        vignette: 0,
+      },
+      high: {
+        dpr: 1.5,
+        aa: true,
+        power: "high-performance",
+        q: 2,
+        look: { b: 1.02, c: 1.08, s: 1.18 },
+        sharp: 1,
+        vignette: 0,
+      },
+      ultra: {
+        dpr: 2,
+        aa: true,
+        power: "high-performance",
+        q: 2,
+        look: { b: 1.03, c: 1.1, s: 1.25 },
+        sharp: 2,
+        vignette: 0.22,
+      },
     };
     const applyBridgeConfig = () => {
       try {
@@ -1542,15 +1778,15 @@ function GamePlayer({
           gfx: profile ? { mode: settings.graphicsMode, ...profile } : null,
         };
         const serialized = JSON.stringify(config);
-        if (doc.documentElement.dataset.p14Cfg !== serialized) {
-          doc.documentElement.dataset.p14Cfg = serialized;
+        if (doc.documentElement.dataset["p14Cfg"] !== serialized) {
+          doc.documentElement.dataset["p14Cfg"] = serialized;
           doc.dispatchEvent(new Event("p14:cfg"));
         }
-        if (!doc.querySelector('script[data-surfvt14-p14-bridge]')) {
+        if (!doc.querySelector("script[data-surfvt14-p14-bridge]")) {
           const script = doc.createElement("script");
           script.src = "/chronometers/p14-bridge-main.js";
           script.async = false;
-          script.dataset.surfvt14P14Bridge = "true";
+          script.dataset["surfvt14P14Bridge"] = "true";
           (doc.head || doc.documentElement).appendChild(script);
         }
       } catch {
@@ -1577,6 +1813,7 @@ function GamePlayer({
           type: "SURFVT14_HUB_SETTINGS",
           settings: {
             controls: settings.controls,
+            customControls: settings.customControls,
             graphicsMode: settings.graphicsMode,
             timerEnabled: settings.timerEnabled,
             saturation: settings.saturation,
@@ -1857,7 +2094,7 @@ function GamePlayer({
             <iframe
               ref={frameRef}
               key={map}
-              src={`${mapPath}?map=${map}&variant=${map === "venice" ? veniceVariant : "default"}&record=${map === "venice" && veniceVariant === "normal" ? "on" : "off"}&hubSettings=${encodeURIComponent(JSON.stringify(settings))}`}
+              src={`${mapPath}?map=${map}&variant=${map === "venice" ? veniceVariant : "default"}&record=${map === "venice" && veniceVariant === "normal" ? "on" : "off"}&hubSettings=${encodeURIComponent(launchSettings)}`}
               title={`${map === "moggers" ? "Subway Moggers" : `${map} | Subway Surfers`}`}
               className="game-frame"
               style={{
@@ -1867,11 +2104,23 @@ function GamePlayer({
               allow="autoplay; fullscreen; gamepad"
               allowFullScreen
               onLoad={() => {
-                onProgress(1);
-                onReady();
+                if (
+                  !["winterholiday", "mexico", "barcelona", "bangkok"].includes(
+                    map,
+                  )
+                ) {
+                  onProgress(1);
+                  onReady();
+                }
                 const gameDocument = frameRef.current?.contentDocument;
                 if (gameDocument && timerCompatible && isVisible)
-                  configureExternalTimers(gameDocument, settings.timerEnabled, settings, controlKeys, isDesktop);
+                  configureExternalTimers(
+                    gameDocument,
+                    settings.timerEnabled,
+                    settings,
+                    controlKeys,
+                    isDesktop,
+                  );
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
                     { type: "SURFVT14_HUB_SETTINGS", settings },
@@ -1940,11 +2189,13 @@ function GamePlayer({
           fpsCap={settings.fpsCap}
           wasdEnabled={settings.wasdEnabled}
           controlKeys={displayControlKeys}
-          pressedKey={pressedKey}
+          pressedKeys={[...pressedKeys, ...(pressedKey ? [pressedKey] : [])]}
           isDesktop={isDesktop}
           autoBoostEnabled={settings.autoBoostEnabled && map !== "moggers"}
           onAutoBoost={triggerAutoBoost}
-          onControlPress={(key, down) => down ? pressControlKey(key) : releaseControlKey(key)}
+          onControlPress={(key, down) =>
+            down ? pressControlKey(key) : releaseControlKey(key)
+          }
         />
       )}
     </div>
@@ -1983,7 +2234,11 @@ export default function MapHub() {
   useEffect(() => {
     const openTimerSettings = () => setSettingsOpen(true);
     window.addEventListener("SURFVT14_OPEN_TIMER_SETTINGS", openTimerSettings);
-    return () => window.removeEventListener("SURFVT14_OPEN_TIMER_SETTINGS", openTimerSettings);
+    return () =>
+      window.removeEventListener(
+        "SURFVT14_OPEN_TIMER_SETTINGS",
+        openTimerSettings,
+      );
   }, []);
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<HubSettings>(() => {
@@ -2045,7 +2300,9 @@ export default function MapHub() {
     const persist = () => {
       try {
         localStorage.setItem("surfvt14-settings", JSON.stringify(settings));
-      } catch {}
+      } catch {
+        /* Storage may be blocked by browser privacy settings. */
+      }
     };
     persist();
     window.addEventListener("beforeunload", persist);
@@ -2058,7 +2315,9 @@ export default function MapHub() {
   useEffect(() => {
     try {
       localStorage.setItem("surfvt14-interface", interfaceMode);
-    } catch {}
+    } catch {
+      /* Storage may be blocked by browser privacy settings. */
+    }
   }, [interfaceMode]);
   useEffect(() => {
     const authStatus = new URLSearchParams(window.location.search).get("auth");
@@ -2094,7 +2353,9 @@ export default function MapHub() {
     const persistProfile = () => {
       try {
         localStorage.setItem("surfvt14-profile", JSON.stringify(profile));
-      } catch {}
+      } catch {
+        /* Storage may be blocked by browser privacy settings. */
+      }
     };
     persistProfile();
     window.addEventListener("beforeunload", persistProfile);
@@ -2226,16 +2487,31 @@ export default function MapHub() {
         Math.min(0.96, current + Math.max(0.004, (0.96 - current) * 0.035)),
       );
     }, 180);
-    const safety = window.setTimeout(() => {
-      setGameProgress(1);
-      setIsPlaying(true);
-      setIsLoadingGame(false);
-    }, 8000);
+    const strictStartup = [
+      "winterholiday",
+      "mexico",
+      "barcelona",
+      "bangkok",
+    ].includes(launchedMap);
+    const safety = window.setTimeout(
+      () => {
+        if (strictStartup) {
+          handleGameError(
+            "O mapa não confirmou a inicialização em 120 segundos. Reabra o mapa e consulte os erros de carregamento.",
+          );
+          return;
+        }
+        setGameProgress(1);
+        setIsPlaying(true);
+        setIsLoadingGame(false);
+      },
+      strictStartup ? 120000 : 8000,
+    );
     return () => {
       window.clearInterval(interval);
       window.clearTimeout(safety);
     };
-  }, [isLoadingGame]);
+  }, [isLoadingGame, launchedMap, handleGameError]);
 
   const handleClose = () => {
     if (sessionStartedAt.current && profile.provider !== "local") {
@@ -2289,7 +2565,9 @@ export default function MapHub() {
       {(isLoadingGame || isPlaying) && (
         <GamePlayer
           map={launchedMap}
-          onTimerSettingsChange={(changes) => setSettings((current) => ({ ...current, ...changes }))}
+          onTimerSettingsChange={(changes) =>
+            setSettings((current) => ({ ...current, ...changes }))
+          }
           mapPath={
             launchedMap === "venice" && veniceVariant === "normal"
               ? "/maps/venice-normal/index.html"
@@ -2990,8 +3268,21 @@ export default function MapHub() {
                 </label>
                 <label>
                   <span>MODO DE GRÁFICOS</span>
-                  <select value={settings.graphicsMode} onChange={(e) => updateSetting("graphicsMode", e.target.value as GraphicsMode)}>
-                    <option value="off">DESLIGADO</option><option value="performance">DESEMPENHO · AUTO</option><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option><option value="ultra">ULTRA</option>
+                  <select
+                    value={settings.graphicsMode}
+                    onChange={(e) =>
+                      updateSetting(
+                        "graphicsMode",
+                        e.target.value as GraphicsMode,
+                      )
+                    }
+                  >
+                    <option value="off">DESLIGADO</option>
+                    <option value="performance">DESEMPENHO · AUTO</option>
+                    <option value="low">LOW</option>
+                    <option value="medium">MEDIUM</option>
+                    <option value="high">HIGH</option>
+                    <option value="ultra">ULTRA</option>
                   </select>
                 </label>
                 <label>
@@ -3051,10 +3342,44 @@ export default function MapHub() {
                 </label>
                 <label>
                   <span>HOTKEY · INICIAR</span>
-                  <input type="text" maxLength={1} value={settings.timerStartHotkey.toUpperCase()} aria-label="Hotkey para iniciar" onChange={(e) => updateSetting("timerStartHotkey", e.target.value.slice(-1).toLowerCase() || "q")} />
+                  <input
+                    type="text"
+                    maxLength={1}
+                    value={settings.timerStartHotkey.toUpperCase()}
+                    aria-label="Hotkey para iniciar"
+                    onChange={(e) =>
+                      updateSetting(
+                        "timerStartHotkey",
+                        e.target.value.slice(-1).toLowerCase() || "q",
+                      )
+                    }
+                  />
                 </label>
-                <label><span>HOTKEY · PAUSAR</span><input type="text" maxLength={1} value={settings.timerPauseHotkey.toUpperCase()} aria-label="Hotkey para pausar" onChange={(e) => updateSetting("timerPauseHotkey", e.target.value.slice(-1).toLowerCase() || "q")} /></label>
-                <label><span>MODO AUTOMÁTICO</span><input type="checkbox" checked={settings.timerAutoMode} onChange={(e) => updateSetting("timerAutoMode", e.target.checked)} /></label>
+                <label>
+                  <span>HOTKEY · PAUSAR</span>
+                  <input
+                    type="text"
+                    maxLength={1}
+                    value={settings.timerPauseHotkey.toUpperCase()}
+                    aria-label="Hotkey para pausar"
+                    onChange={(e) =>
+                      updateSetting(
+                        "timerPauseHotkey",
+                        e.target.value.slice(-1).toLowerCase() || "q",
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  <span>MODO AUTOMÁTICO</span>
+                  <input
+                    type="checkbox"
+                    checked={settings.timerAutoMode}
+                    onChange={(e) =>
+                      updateSetting("timerAutoMode", e.target.checked)
+                    }
+                  />
+                </label>
                 <label>
                   <span>HOTKEY · REINICIAR</span>
                   <input
@@ -3062,7 +3387,12 @@ export default function MapHub() {
                     maxLength={1}
                     value={settings.timerResetHotkey.toUpperCase()}
                     aria-label="Hotkey para reiniciar os cronômetros"
-                    onChange={(e) => updateSetting("timerResetHotkey", e.target.value.slice(-1).toLowerCase() || "r")}
+                    onChange={(e) =>
+                      updateSetting(
+                        "timerResetHotkey",
+                        e.target.value.slice(-1).toLowerCase() || "r",
+                      )
+                    }
                   />
                 </label>
                 <label>
@@ -3150,17 +3480,52 @@ export default function MapHub() {
                 </label>
                 <label>
                   <span>LOCAL DO AUTOBOOST</span>
-                  <select value={settings.autoBoostCorner} onChange={(e) => updateSetting("autoBoostCorner", e.target.value as HubSettings["autoBoostCorner"])}>
-                    <option value="bottomLeft">CANTO INFERIOR ESQUERDO</option><option value="bottomRight">CANTO INFERIOR DIREITO</option><option value="topLeft">CANTO SUPERIOR ESQUERDO</option><option value="topRight">CANTO SUPERIOR DIREITO</option><option value="center">CENTRO</option>
+                  <select
+                    value={settings.autoBoostCorner}
+                    onChange={(e) =>
+                      updateSetting(
+                        "autoBoostCorner",
+                        e.target.value as HubSettings["autoBoostCorner"],
+                      )
+                    }
+                  >
+                    <option value="bottomLeft">CANTO INFERIOR ESQUERDO</option>
+                    <option value="bottomRight">CANTO INFERIOR DIREITO</option>
+                    <option value="topLeft">CANTO SUPERIOR ESQUERDO</option>
+                    <option value="topRight">CANTO SUPERIOR DIREITO</option>
+                    <option value="center">CENTRO</option>
                   </select>
                 </label>
                 <label>
-                  <span>CLIQUES AUTOBOOST <b>{settings.autoBoostCount}</b></span>
-                  <select value={settings.autoBoostCount} onChange={(e) => updateSetting("autoBoostCount", Number(e.target.value))}><option value={1}>1</option><option value={3}>3</option><option value={5}>5</option><option value={10}>10</option></select>
+                  <span>
+                    CLIQUES AUTOBOOST <b>{settings.autoBoostCount}</b>
+                  </span>
+                  <select
+                    value={settings.autoBoostCount}
+                    onChange={(e) =>
+                      updateSetting("autoBoostCount", Number(e.target.value))
+                    }
+                  >
+                    <option value={1}>1</option>
+                    <option value={3}>3</option>
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                  </select>
                 </label>
                 <label>
-                  <span>INTERVALO AUTOBOOST <b>{settings.autoBoostDelay} ms</b></span>
-                  <input type="range" min="10" max="200" step="10" value={settings.autoBoostDelay} onChange={(e) => updateSetting("autoBoostDelay", Number(e.target.value))} />
+                  <span>
+                    INTERVALO AUTOBOOST <b>{settings.autoBoostDelay} ms</b>
+                  </span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="200"
+                    step="10"
+                    value={settings.autoBoostDelay}
+                    onChange={(e) =>
+                      updateSetting("autoBoostDelay", Number(e.target.value))
+                    }
+                  />
                 </label>
                 <label>
                   <span>{copy.fps}</span>

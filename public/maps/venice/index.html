@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <script src="/chronometers/input-bridge.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
   <title>Subway Surfers Map</title>
@@ -39,71 +40,7 @@
 
       // Atalhos inspirados no WASD.ahk enviado: W/A/S/D viram as quatro setas
       // antes de chegar ao canvas Unity. As setas nativas continuam funcionando.
-      (function installKeyboardBridge() {
-        var codes = { ArrowUp: 38, ArrowLeft: 37, ArrowDown: 40, ArrowRight: 39 };
-        var movement = { w: 'ArrowUp', a: 'ArrowLeft', s: 'ArrowDown', d: 'ArrowRight' };
-        try {
-          var rawSettings = params.get('hubSettings');
-          var settings = rawSettings ? JSON.parse(rawSettings) : {};
-          var scheme = settings.controls || 'WASD';
-          if (scheme === 'IJKL') movement = { i: 'ArrowUp', j: 'ArrowLeft', k: 'ArrowDown', l: 'ArrowRight' };
-          else if (scheme === 'SETAS') movement = { arrowup: 'ArrowUp', arrowleft: 'ArrowLeft', arrowdown: 'ArrowDown', arrowright: 'ArrowRight' };
-          else if (scheme === 'PERSONALIZADO') {
-            var custom = settings.customControls || {};
-            movement = {};
-            movement[String(custom.up || 'T').toLowerCase()] = 'ArrowUp';
-            movement[String(custom.left || 'F').toLowerCase()] = 'ArrowLeft';
-            movement[String(custom.down || 'G').toLowerCase()] = 'ArrowDown';
-            movement[String(custom.right || 'H').toLowerCase()] = 'ArrowRight';
-          }
-        } catch (e) {}
-        function normalize(value) {
-          var key = String(value || '').toLowerCase();
-          return ({ '↑': 'arrowup', '←': 'arrowleft', '↓': 'arrowdown', '→': 'arrowright' })[key] || key;
-        }
-        function makeEvent(type, mapped, repeat) {
-          var synthetic = new KeyboardEvent(type, { key: mapped, code: mapped, bubbles: true, cancelable: true, repeat: !!repeat });
-          try {
-            Object.defineProperty(synthetic, 'keyCode', { value: codes[mapped] || 0 });
-            Object.defineProperty(synthetic, 'which', { value: codes[mapped] || 0 });
-            Object.defineProperty(synthetic, '__surfVT14Forwarded', { value: true });
-          } catch (e) {}
-          return synthetic;
-        }
-        function forward(event) {
-          if (event.__surfVT14Forwarded) return;
-          var key = normalize(event.key);
-          if (key === 'q' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_TOGGLE'); event.preventDefault(); return; }
-          if (key === 'r' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_RESET'); event.preventDefault(); return; }
-          var mapped = movement[key];
-          if (!mapped) return;
-          event.preventDefault();
-          event.stopImmediatePropagation();
-          var synthetic = makeEvent(event.type, mapped, event.repeat);
-          dispatchToUnity(synthetic);
-        }
-        window.addEventListener('message', function(event) {
-          var data = event.data || {};
-          if (data.type !== 'SURFVT14_KEY') return;
-          var mapped = data.key || '';
-          var synthetic = makeEvent(data.eventType || 'keydown', mapped, data.repeat);
-          dispatchToUnity(synthetic);
-        });
-        window.addEventListener('keydown', forward, true);
-        window.addEventListener('keyup', forward, true);
-        function dispatchToUnity(event) {
-          var canvas = document.querySelector('canvas');
-          // Unity 2019 registra o teclado no document/window. O dispatch no
-          // document também borbulha até window, sem depender de o canvas
-          // possuir foco ou de o clique ter ocorrido dentro do WebGL.
-          try { document.dispatchEvent(event); } catch (e) {
-            try { window.dispatchEvent(event); } catch (ignored) {}
-          }
-          if (canvas) {
-            try { canvas.focus(); } catch (e) {}
-          }
-        }
-      })();
+      // Physical keyboard and touch messages are handled by input-bridge.js.
 
       // ---- Ponte Poki -> Unity -------------------------------------------------
       // O build original usa o Poki SDK para liberar a inicialização do jogo.

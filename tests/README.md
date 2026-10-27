@@ -1,0 +1,16 @@
+# Testes SurfVT14
+
+Requisitos: Python com `playwright`, Chromium em `/usr/bin/chromium`, dependências Node do projeto.
+
+1. Execute `npm run dev -- --host 0.0.0.0 --port 3000`.
+2. Execute `python -m http.server 8081 --directory public` para os testes isolados dos mapas.
+3. Execute:
+
+```sh
+BASE_URL=http://127.0.0.1:3000 EVIDENCE_DIR=/tmp/surfvt-evidence python tests/browser-regressions.py
+BASE_URL=http://127.0.0.1:3000 python tests/cache-migration.py
+MAP_BASE_URL=http://127.0.0.1:8081 python tests/clock-boundaries.py
+MAP_BASE_URL=http://127.0.0.1:8081 EVIDENCE_DIR=/tmp/surfvt-evidence python tests/map-startup.py
+```
+
+Crie previamente a pasta de evidências. Os testes de mapas usam contextos descartáveis, sem saves pessoais, e passam pelos diálogos originais antes de iniciar uma partida. Não edite código enquanto o teste usa o servidor Vite: HMR pode descartar o iframe e invalidar a execução. O teste móvel usa emulação Chromium e não substitui um iPhone/Safari real.
