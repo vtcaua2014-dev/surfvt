@@ -1,4 +1,4 @@
-/* This 2018 Bangkok player responds to mouse input but ignores touchscreen taps.
+/* This legacy Bangkok player responds to mouse input but ignores touchscreen taps.
  * Convert one finger to one mouse gesture, suppressing the browser's duplicate
  * compatibility mouse events and leaving every other map's touch input intact. */
 (() => {

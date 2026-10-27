@@ -4,7 +4,7 @@
   "productVersion": "1.94.0",
   "dataUrl": "bangkok.alt.data.unityweb?v=8bfd5c3a4e8f",
   "wasmCodeUrl": "bangkok.alt.wasm.code.unityweb?v=e4b619b0eb22",
-  "wasmFrameworkUrl": "bangkok.alt.wasm.framework.unityweb?v=ad6e637dc274",
+  "wasmFrameworkUrl": "bangkok.alt.wasm.framework.unityweb?v=7499bb01d536",
   "asmCodeUrl": "bangkok.alt.asm.code.unityweb?v=544928af73e2",
   "asmMemoryUrl": "bangkok.alt.asm.memory.unityweb?v=735c20be3478",
   "asmFrameworkUrl": "bangkok.alt.asm.framework.unityweb?v=543ee315f5a1",
@@ -23,5 +23,5 @@
   "backgroundColor": "#000000",
   "developmentBuild": false,
   "multithreading": false,
-  "unityVersion": "2018.4.36f1"
+  "unityVersion": "5.6.3p1"
 }

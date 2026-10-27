@@ -33,7 +33,7 @@
       var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900);
       var modeName = 'Bangkok · Build original';
       document.getElementById('mode').textContent = modeName;
-      window.__surfVT14 = { map: 'Bangkok', version: '2019.4.18f1' };
+      window.__surfVT14 = { map: 'Bangkok', version: '5.6.3p1' };
       function announce(type, extra) { try { parent.postMessage(Object.assign({ type: type, map: 'bangkok' }, extra || {}), '*'); } catch (e) {} }
       function noResult() { return Promise.resolve(); }
 
@@ -46,7 +46,7 @@
       // Mesmo em modo local/offline, o Unity precisa receber o sinal "ready"
       // depois que initPokiBridge() for chamado. Sem isso o jogo pode ficar preso
       // na tela de dica/loading mesmo com os arquivos WebGL já baixados.
-      // The 2018 Bangkok runtime has Application.OpenURL. Its packaged host
+      // The legacy Bangkok runtime has Application.OpenURL. Its packaged host
       // check must never navigate this embedded map to another Poki game.
       window.__blockUnityExternalOpenURL = function (value) {
         var target;

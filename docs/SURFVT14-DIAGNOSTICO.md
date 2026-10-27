@@ -35,10 +35,10 @@ Revisados os commits 111978b6, de9e71ec, 4a323f0c, 63fac860, accf301a e 861df86d
 
 ### Bangkok
 
-- A build é diferente: dados de Bangkok 1.102.0 e runtime/manifesto 2018.4; foi analisada separadamente.
+- A build é diferente: dados de Bangkok 1.102.0 e manifesto originalmente rotulado 2018.4; o runtime identifica-se como Unity 5.6.3p1; foi analisada separadamente.
 - O `.data.unityweb` publicado e o da main eram idênticos: SHA-256 `faeab6b90363a0eee68b2f7f639c04228e4deaee3a4f0e86a88942ed21b8ceeb`. Seus assets identificam Bangkok, não Crossy Road.
-- A build atual já continha uma alteração do destino codificado para `javascript:void(0)`. O redirecionamento para Crossy Road não foi reproduzido com esses arquivos; não foi inventada uma corrupção para justificar substituição.
-- O framework já consultava `window.__blockUnityExternalOpenURL`, mas o HTML não definia o bloqueio. O HTML agora o define e impede a navegação externa do jogo, registrando o destino bloqueado.
+- A navegação para Crossy Road foi reproduzida no domínio publicado. O framework WASM contém um setTimeout de dois segundos com hostname e destinos codificados em base64. A lista aceita somente localhost, 127.0.0.1 e game-cdn.poki.com. Fora deles, escreve diretamente em window.top.location o destino http://po.ki/sitelockredirect, que redireciona para games.poki.com/458768/crossyroad. Por isso testes em localhost não detectavam o erro.
+- O HTML define o bloqueio de Application.OpenURL, mas a verificação de hostname o contornava. A correção definitiva remove apenas esse temporizador de redirecionamento e a injeção de anti-debug associada do framework. WASM e dados de Bangkok permanecem intactos. O manifesto ganhou uma nova query derivada do SHA-256 do framework, para invalidar caches, e a versão descritiva foi corrigida para Unity 5.6.3p1.
 
 - No teste móvel de Bangkok, o diálogo original ignorou toques, mas respondeu a cliques de mouse nas mesmas coordenadas. `touch-input.js`, exclusivo dessa build, converte um gesto de um dedo em eventos de mouse e suprime a duplicação de eventos de compatibilidade. As outras builds mantêm seus eventos nativos de toque.
 
@@ -67,3 +67,6 @@ Resultados locais confirmados:
 - Bangkok móvel: a primeira tentativa de converter toque em clique ainda não avançava. O teste identificou a necessidade de enviar movimento antes do pressionamento e separar a liberação por um frame. Após a correção, idade, consentimento e partida foram confirmados com touchscreen e user-agent Android; gameplayStart e roundStart apareceram, sem erros JavaScript.
 
 SHA do commit e estado do deploy são informados no relatório de entrega após a publicação.
+
+
+Teste complementar de Bangkok: partida iniciada com toque em http://127.0.0.2:8081, hostname fora da lista antiga. O defeito foi também reproduzido no domínio público antes dessa correção; a comparação byte a byte do framework provou que não era um deploy com outro arquivo.

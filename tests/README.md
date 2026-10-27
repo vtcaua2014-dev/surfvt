@@ -14,3 +14,5 @@ MAP_BASE_URL=http://127.0.0.1:8081 EVIDENCE_DIR=/tmp/surfvt-evidence python test
 ```
 
 Crie previamente a pasta de evidências. Os testes de mapas usam contextos descartáveis, sem saves pessoais, e passam pelos diálogos originais antes de iniciar uma partida. Não edite código enquanto o teste usa o servidor Vite: HMR pode descartar o iframe e invalidar a execução. O teste móvel usa emulação Chromium e não substitui um iPhone/Safari real.
+
+Para detectar regressões de restrição de domínio de Bangkok, repita o teste com MAP_BASE_URL=http://127.0.0.2:8081: esse endereço de loopback não pertence à antiga lista permitida, que incluía somente 127.0.0.1 e localhost. Isso exige o servidor escutando em todas as interfaces, como no comando acima.
