@@ -1040,6 +1040,52 @@ function saturationValue(level: HubSettings["saturation"]) {
         : 1.9;
 }
 
+const externalTimerFiles = [
+  ["livesplit", "/chronometers/livesplit.js"],
+  ["chrono", "/chronometers/chrono.js"],
+  ["native", "/chronometers/floatingclock.js"],
+  ["controller", "/chronometers/timer-controller.js"],
+] as const;
+const externalTimerLoads = new WeakMap<Document, Promise<void>>();
+
+function ensureExternalTimerScripts(doc: Document): Promise<void> {
+  const pending = externalTimerLoads.get(doc);
+  if (pending) return pending;
+  const task = (async () => {
+    const head = doc.head || doc.documentElement;
+    if (!head) return;
+    const cover = doc.createElement("style");
+    cover.id = "surfvt14-timer-preload-hide";
+    cover.textContent = "#chrono,#p14-chrono,#p14-floatingclock{visibility:hidden!important}";
+    head.appendChild(cover);
+    for (const [name, src] of externalTimerFiles) {
+      const script = doc.createElement("script");
+      script.src = src;
+      script.dataset.surfvt14Timer = name;
+      await new Promise<void>((resolve) => {
+        script.onload = () => resolve();
+        script.onerror = () => resolve();
+        head.appendChild(script);
+      });
+    }
+    cover.remove();
+  })();
+  externalTimerLoads.set(doc, task);
+  return task;
+}
+
+function configureExternalTimers(doc: Document, enabled: boolean, mode: TimerStyle) {
+  const gameWindow = doc.defaultView;
+  if (!gameWindow || doc.URL === "about:blank") return;
+  const hasController = Boolean(doc.querySelector('script[data-surfvt14-timer="controller"]'));
+  const send = () => gameWindow.postMessage(
+    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode },
+    window.location.origin,
+  );
+  if (hasController) send();
+  else if (enabled) void ensureExternalTimerScripts(doc).then(send);
+}
+
 type GamePlayerProps = {
   map: MapId;
   mapPath: string;
@@ -1087,6 +1133,57 @@ function GamePlayer({
     onProgress(1);
     onReady();
   }, [downloadOnly]);
+  useEffect(() => {
+    if (!timerCompatible || !isVisible || !settings.timerEnabled) {
+      const doc = frameRef.current?.contentDocument;
+      if (doc) configureExternalTimers(doc, false, settings.timerStyle);
+      return;
+    }
+    const frame = frameRef.current;
+    if (!frame) return;
+    const sync = () => {
+      const doc = frame.contentDocument;
+      if (!doc || doc.URL === "about:blank") return;
+      configureExternalTimers(doc, true, settings.timerStyle);
+    };
+    frame.addEventListener("load", sync);
+    sync();
+    return () => {
+      frame.removeEventListener("load", sync);
+      const doc = frame.contentDocument;
+      if (doc) configureExternalTimers(doc, false, settings.timerStyle);
+    };
+  }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle]);
+
+  useEffect(() => {
+    if (!timerCompatible || !isVisible || !settings.timerEnabled) return;
+    const sendCommand = (action: "toggle" | "reset") => {
+      frameRef.current?.contentWindow?.postMessage(
+        { type: "SURFVT14_TIMER_COMMAND", action },
+        window.location.origin,
+      );
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
+      const key = event.key.toLowerCase();
+      if (key !== "q" && key !== "r") return;
+      event.preventDefault();
+      sendCommand(key === "q" ? "toggle" : "reset");
+    };
+    const toggleEvent = () => sendCommand("toggle");
+    const resetEvent = () => sendCommand("reset");
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("SURFVT14_TIMER_TOGGLE", toggleEvent);
+    window.addEventListener("SURFVT14_TIMER_RESET", resetEvent);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("SURFVT14_TIMER_TOGGLE", toggleEvent);
+      window.removeEventListener("SURFVT14_TIMER_RESET", resetEvent);
+    };
+  }, [timerCompatible, isVisible, settings.timerEnabled]);
+
   const customControlKeys = [
     settings.customControls.up,
     settings.customControls.left,
@@ -1738,9 +1835,6 @@ function GamePlayer({
       )}
       {isVisible && !downloadOnly && (
         <P14Overlays
-          timerEnabled={settings.timerEnabled}
-          timerStyle={settings.timerStyle}
-          timerCompatible={timerCompatible}
           fpsEnabled={settings.fps}
           fpsCap={settings.fpsCap}
           wasdEnabled={settings.wasdEnabled}
