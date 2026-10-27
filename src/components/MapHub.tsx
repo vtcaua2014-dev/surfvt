@@ -1070,18 +1070,18 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
     head.appendChild(cover);
     try {
       for (const [name, src] of externalTimerFiles) {
-        const existing = doc.querySelector<HTMLScriptElement>(`script[data-surfvt14-timer="${name}"]`);
+        const existing = doc.querySelector<HTMLScriptElement>(`script[data-surfvt14-timer="${name}"][data-loaded="true"]`);
         if (existing?.dataset.loaded === "true") continue;
         const script = existing || doc.createElement("script");
         script.src = src;
         script.dataset.surfvt14Timer = name;
         await new Promise<void>((resolve, reject) => {
           script.onload = () => { script.dataset.loaded = "true"; resolve(); };
-          script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+          script.onerror = () => { script.remove(); reject(new Error(`Falha ao carregar ${src}`)); };
           if (!existing) head.appendChild(script);
         });
       }
-      if (!doc.defaultView?.__surfvt14TimerController) {
+      if (!(doc.defaultView as (Window & { __surfvt14TimerController?: unknown }) | null)?.__surfvt14TimerController) {
         throw new Error("Controlador de cronômetros não inicializou");
       }
     } finally {
