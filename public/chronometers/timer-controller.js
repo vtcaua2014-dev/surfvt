@@ -48,10 +48,12 @@
   }
   function applyVisibility() {
     const visibility = {
-      livesplit: ["#chrono", "#chronoSettingsPopup"],
+      livesplit: ["#chrono"],
       chrono: ["#p14-chrono"],
       native: ["#p14-floatingclock"]
     };
+    const settingsPopup = document.querySelector("#chronoSettingsPopup");
+    if (settingsPopup && (!config.enabled || config.mode !== "livesplit")) settingsPopup.style.display = "none";
     for (const mode of validModes) {
       for (const selector of visibility[mode]) {
         const node = document.querySelector(selector);
