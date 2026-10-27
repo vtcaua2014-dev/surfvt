@@ -1,134 +1,17 @@
-/* Coordinates the three supplied timer scripts inside the game iframe. */
 (() => {
-  "use strict";
-  if (window.__surfvt14TimerController) return;
-
-  let config = { enabled: false, mode: "chrono", toggleHotkey: "q", resetHotkey: "r" };
-  let previousMode = "";
-  let previousMaster = "";
-  let previousTarget = "";
-
-  const validModes = new Set(["native", "chrono", "livesplit"]);
-  function apiFor(mode) {
-    if (mode === "livesplit") return window.chrono || null;
-    if (mode === "chrono") return window.P14Chrono || null;
-    if (mode === "native") return window.P14FloatingClock || null;
-    return null;
-  }
-  function stateFor(mode) {
-    const api = apiFor(mode);
-    if (!api) return "";
-    if (mode === "livesplit") {
-      try { return String(api.state()?.timerState || ""); } catch (_) { return ""; }
-    }
-    try { return String(api.state || ""); } catch (_) { return ""; }
-  }
-  function setState(mode, desired) {
-    const api = apiFor(mode);
-    if (!api || !desired) return;
-    const current = stateFor(mode);
-    if (desired === "stopped") {
-      if (current !== "stopped") api.reset?.();
-      return;
-    }
-    if (desired === "running") {
-      if (current === "stopped") api.start?.();
-      else if (current === "paused") {
-        if (mode === "livesplit") api.resume?.();
-        else api.start?.();
-      }
-      return;
-    }
-    if (desired === "paused") {
-      if (current === "stopped") {
-        api.start?.();
-        api.pause?.();
-      } else if (current === "running") api.pause?.();
-    }
-  }
-  function applyVisibility() {
-    const visibility = {
-      livesplit: ["#chrono"],
-      chrono: ["#p14-chrono"],
-      native: ["#p14-floatingclock"]
-    };
-    const settingsPopup = document.querySelector("#chronoSettingsPopup");
-    if (settingsPopup && (!config.enabled || config.mode !== "livesplit")) settingsPopup.style.display = "none";
-    for (const mode of validModes) {
-      for (const selector of visibility[mode]) {
-        const node = document.querySelector(selector);
-        if (node) node.style.display = config.enabled && config.mode === mode ? "" : "none";
-      }
-    }
-  }
-  function sync() {
-    applyVisibility();
-    const master = stateFor("livesplit");
-    const target = stateFor(config.mode);
-    if (!master || !target) return;
-    if (config.mode === "livesplit") {
-      previousMode = config.mode;
-      previousMaster = master;
-      previousTarget = target;
-      return;
-    }
-    if (previousMode !== config.mode) {
-      setState(config.mode, master);
-    } else if (master !== previousMaster && target === previousTarget) {
-      setState(config.mode, master);
-    } else if (target !== previousTarget && master === previousMaster) {
-      setState("livesplit", target);
-    } else if (target !== master) {
-      setState(config.mode, master);
-    }
-    previousMode = config.mode;
-    previousMaster = stateFor("livesplit");
-    previousTarget = stateFor(config.mode);
-  }
-  function toggleMaster() {
-    const api = apiFor("livesplit");
-    const state = stateFor("livesplit");
-    if (!api) return;
-    if (state === "running") api.pause?.();
-    else if (state === "paused") api.resume?.();
-    else api.start?.();
-    sync();
-  }
-  function resetMaster() {
-    apiFor("livesplit")?.reset?.();
-    sync();
-  }
-  function onKey(event) {
-    if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.target?.isContentEditable) return;
-    const key = String(event.key || "").toLowerCase();
-    if (key !== config.toggleHotkey && key !== config.resetHotkey) return;
-    if (!config.enabled) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if (key === config.toggleHotkey) toggleMaster();
-    else resetMaster();
-  }
-  window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.origin !== window.location.origin) return;
-    const data = event.data || {};
-    if (data.type === "SURFVT14_TIMERS_CONFIG") {
-      config = {
-        enabled: Boolean(data.enabled),
-        mode: validModes.has(data.mode) ? data.mode : "chrono",
-        toggleHotkey: String(data.toggleHotkey || "q").toLowerCase(),
-        resetHotkey: String(data.resetHotkey || "r").toLowerCase()
-      };
-      sync();
-    } else if (data.type === "SURFVT14_TIMER_COMMAND" && config.enabled) {
-      if (data.action === "toggle") toggleMaster();
-      if (data.action === "reset") resetMaster();
-    }
-  });
-  window.addEventListener("SURFVT14_TIMER_TOGGLE", () => { if (config.enabled) toggleMaster(); });
-  window.addEventListener("SURFVT14_TIMER_RESET", () => { if (config.enabled) resetMaster(); });
-  document.addEventListener("keydown", onKey, true);
-  window.__surfvt14TimerController = { sync, setConfig(value) { config = { ...config, ...value }; sync(); } };
-  window.setInterval(sync, 80);
-  sync();
+"use strict"; if(window.__surfvt14TimerController)return;
+let c={enabled:false,mode:"chrono",startHotkey:"q",pauseHotkey:"q",resetHotkey:"r",autoMode:true},pm="",pma="",pt="";
+const modes=new Set(["native","chrono","livesplit"]);
+function api(m){return m==="livesplit"?window.chrono:m==="chrono"?window.P14Chrono:m==="native"?window.P14FloatingClock:null}
+function state(m){try{return String(m==="livesplit"?api(m)?.state()?.timerState||"":api(m)?.state||"")}catch(_){return""}}
+function set(m,s){const a=api(m),x=state(m);if(!a)return;if(s==="stopped"){if(x!=="stopped")a.reset?.()}else if(s==="running"){if(x==="stopped")a.start?.();else if(x==="paused")(m==="livesplit"?a.resume?.():a.start?.())}else if(s==="paused"){if(x==="stopped"){a.start?.();a.pause?.()}else if(x==="running")a.pause?.()}}
+function sync(){for(const[m,q]of Object.entries({livesplit:"#chrono",chrono:"#p14-chrono",native:"#p14-floatingclock"})){const n=document.querySelector(q);if(n)n.style.display=c.enabled&&c.mode===m?"":"none"}const a=state("livesplit"),b=state(c.mode);if(!a||!b)return;if(c.mode==="livesplit"){pm=c.mode;pma=a;pt=b;return}if(pm!==c.mode)set(c.mode,a);else if(a!==pma&&b===pt)set(c.mode,a);else if(b!==pt&&a===pma)set("livesplit",b);else if(b!==a)set(c.mode,a);pm=c.mode;pma=state("livesplit");pt=state(c.mode)}
+function toggle(){const a=api("livesplit"),s=state("livesplit");if(s==="running")a?.pause?.();else if(s==="paused")a?.resume?.();else a?.start?.();sync()}
+function start(){if(state("livesplit")!=="running")api("livesplit")?.start?.();sync()}
+function pause(){if(state("livesplit")==="running")api("livesplit")?.pause?.();sync()}
+function reset(){api("livesplit")?.reset?.();sync()}
+function key(e){if(!c.enabled||e.repeat||e.ctrlKey||e.altKey||e.metaKey||e.target?.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||""))return;const k=(e.key||"").toLowerCase();if(![c.startHotkey,c.pauseHotkey,c.resetHotkey].includes(k))return;e.preventDefault();e.stopImmediatePropagation();if(c.startHotkey===c.pauseHotkey&&k===c.startHotkey)toggle();else if(k===c.startHotkey)start();else if(k===c.pauseHotkey)pause();else reset()}
+window.addEventListener("message",e=>{if(e.source!==parent||e.origin!==location.origin)return;const d=e.data||{};if(d.type==="SURFVT14_TIMERS_CONFIG"){c={...c,...d,enabled:!!d.enabled,mode:modes.has(d.mode)?d.mode:"chrono",startHotkey:String(d.startHotkey||"q").toLowerCase(),pauseHotkey:String(d.pauseHotkey||"q").toLowerCase(),resetHotkey:String(d.resetHotkey||"r").toLowerCase()};sync()}if(d.type==="SURFVT14_TIMER_COMMAND"&&c.enabled)({toggle,start,pause,reset}[d.action]||(()=>{}))()});
+window.addEventListener("SURFVT14_TIMER_TOGGLE",()=>c.enabled&&toggle());window.addEventListener("SURFVT14_TIMER_RESET",()=>c.enabled&&reset());document.addEventListener("keydown",key,true);
+window.__surfvt14TimerController={sync,setConfig(v){c={...c,...v};sync()},getConfig(){return{...c}}};setInterval(sync,80);sync();
 })();
