@@ -1336,6 +1336,14 @@ function GamePlayer({
       const keys = [...held];
       setPressedKey(keys.length ? keys[keys.length - 1] : null);
     };
+    const onFrameKey = (event: MessageEvent) => {
+      if (event.source !== frame.contentWindow || event.origin !== window.location.origin || event.data?.type !== "SURFVT14_KEY_VISUAL") return;
+      const key = normalize(String(event.data.key || ""));
+      if (!controlKeys.some((control) => control.toUpperCase() === key.toUpperCase())) return;
+      if (event.data.down) held.add(key); else held.delete(key);
+      const keys = [...held];
+      setPressedKey(keys.length ? keys[keys.length - 1] : null);
+    };
     const clear = () => { held.clear(); setPressedKey(null); };
     let frameDoc: Document | null = null;
     let frameWindow: Window | null = null;
@@ -1350,12 +1358,14 @@ function GamePlayer({
       frameWindow?.addEventListener("blur", clear);
       clear();
     };
+    window.addEventListener("message", onFrameKey);
     window.addEventListener("keydown", track, true);
     window.addEventListener("keyup", track, true);
     window.addEventListener("blur", clear);
     frame.addEventListener("load", attach);
     attach();
     return () => {
+      window.removeEventListener("message", onFrameKey);
       window.removeEventListener("keydown", track, true);
       window.removeEventListener("keyup", track, true);
       window.removeEventListener("blur", clear);
