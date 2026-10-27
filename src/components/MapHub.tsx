@@ -1155,7 +1155,7 @@ function GamePlayer({
     return () => {
       frame.removeEventListener("load", sync);
       const doc = frame.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings.timerStyle);
+      if (doc) configureExternalTimers(doc, false, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
     };
   }, [timerCompatible, isVisible, settings.timerEnabled, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey]);
 
@@ -1775,6 +1775,8 @@ function GamePlayer({
                 onProgress(1);
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
+                if (gameDocument && timerCompatible && isVisible && settings.timerEnabled)
+                  configureExternalTimers(gameDocument, true, settings.timerStyle, settings.timerToggleHotkey, settings.timerResetHotkey);
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
                     { type: "SURFVT14_HUB_SETTINGS", settings },
