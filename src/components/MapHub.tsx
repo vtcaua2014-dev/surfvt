@@ -1063,37 +1063,54 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
   if (pending) return pending;
   const task = (async () => {
     const head = doc.head || doc.documentElement;
-    if (!head) return;
+    if (!head) throw new Error("Iframe sem documentElement");
     const cover = doc.createElement("style");
     cover.id = "surfvt14-timer-preload-hide";
     cover.textContent = "#chrono,#p14-chrono,#p14-floatingclock{visibility:hidden!important}";
     head.appendChild(cover);
-    for (const [name, src] of externalTimerFiles) {
-      const script = doc.createElement("script");
-      script.src = src;
-      script.dataset.surfvt14Timer = name;
-      await new Promise<void>((resolve) => {
-        script.onload = () => resolve();
-        script.onerror = () => resolve();
-        head.appendChild(script);
-      });
+    try {
+      for (const [name, src] of externalTimerFiles) {
+        const existing = doc.querySelector<HTMLScriptElement>(`script[data-surfvt14-timer="${name}"]`);
+        if (existing?.dataset.loaded === "true") continue;
+        const script = existing || doc.createElement("script");
+        script.src = src;
+        script.dataset.surfvt14Timer = name;
+        await new Promise<void>((resolve, reject) => {
+          script.onload = () => { script.dataset.loaded = "true"; resolve(); };
+          script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+          if (!existing) head.appendChild(script);
+        });
+      }
+      if (!doc.defaultView?.__surfvt14TimerController) {
+        throw new Error("Controlador de cronômetros não inicializou");
+      }
+    } finally {
+      cover.remove();
     }
-    cover.remove();
   })();
   externalTimerLoads.set(doc, task);
+  void task.catch((error) => {
+    externalTimerLoads.delete(doc);
+    console.error("[SurfVT14] Erro ao carregar cronômetros:", error);
+  });
   return task;
 }
 
 function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[], isDesktop: boolean) {
   const gameWindow = doc.defaultView;
   if (!gameWindow || doc.URL === "about:blank") return;
-  const hasController = Boolean(doc.querySelector('script[data-surfvt14-timer="controller"]'));
-  const send = () => gameWindow.postMessage(
-    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: settings.wasdEnabled && isDesktop, controlKeys },
-    window.location.origin,
-  );
-  if (hasController) send();
-  else void ensureExternalTimerScripts(doc).then(send);
+  // A visualização das teclas é React tanto no desktop como no celular.
+  // A ponte interna permanece responsável apenas pelos eventos reais do jogo.
+  const send = () => {
+    if (doc.defaultView !== gameWindow || !doc.documentElement?.isConnected) return;
+    gameWindow.postMessage(
+      { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: false, controlKeys },
+      window.location.origin,
+    );
+  };
+  void ensureExternalTimerScripts(doc).then(send).catch((error) => {
+    console.error("[SurfVT14] Falha na configuração dos cronômetros:", error);
+  });
 }
 
 type GamePlayerProps = {
@@ -1300,6 +1317,55 @@ function GamePlayer({
   }, []);
 
 
+  // O foco do teclado pode estar DENTRO do iframe. Eventos não sobem para
+  // window.parent, portanto o painel React observa também o documento do jogo.
+  useEffect(() => {
+    if (!isVisible || downloadOnly) return;
+    const frame = frameRef.current;
+    if (!frame) return;
+    const normalize = (key: string) => ({ ArrowUp: "↑", ArrowLeft: "←", ArrowDown: "↓", ArrowRight: "→" } as Record<string, string>)[key] || key.toUpperCase();
+    const held = new Set<string>();
+    const track = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)) return;
+      const key = normalize(event.key);
+      if (!controlKeys.some((control) => control.toUpperCase() === key.toUpperCase())) return;
+      if (event.type === "keydown") held.add(key);
+      else held.delete(key);
+      const keys = [...held];
+      setPressedKey(keys.length ? keys[keys.length - 1] : null);
+    };
+    const clear = () => { held.clear(); setPressedKey(null); };
+    let frameDoc: Document | null = null;
+    let frameWindow: Window | null = null;
+    const attach = () => {
+      frameDoc?.removeEventListener("keydown", track, true);
+      frameDoc?.removeEventListener("keyup", track, true);
+      frameWindow?.removeEventListener("blur", clear);
+      try { frameDoc = frame.contentDocument; frameWindow = frame.contentWindow; }
+      catch { frameDoc = null; frameWindow = null; }
+      frameDoc?.addEventListener("keydown", track, true);
+      frameDoc?.addEventListener("keyup", track, true);
+      frameWindow?.addEventListener("blur", clear);
+      clear();
+    };
+    window.addEventListener("keydown", track, true);
+    window.addEventListener("keyup", track, true);
+    window.addEventListener("blur", clear);
+    frame.addEventListener("load", attach);
+    attach();
+    return () => {
+      window.removeEventListener("keydown", track, true);
+      window.removeEventListener("keyup", track, true);
+      window.removeEventListener("blur", clear);
+      frame.removeEventListener("load", attach);
+      frameDoc?.removeEventListener("keydown", track, true);
+      frameDoc?.removeEventListener("keyup", track, true);
+      frameWindow?.removeEventListener("blur", clear);
+    };
+  }, [isVisible, downloadOnly, settings.controls, settings.customControls]);
+
   useEffect(() => {
     const normalizeKey = (value: string) => {
       const key = value.trim().toLowerCase();
@@ -1352,7 +1418,6 @@ function GamePlayer({
       if (!frame?.contentWindow || !doc || event.target === frame) return;
       const mapped = movementMap[key];
       if (!mapped) return;
-      setPressedKey(event.type === "keydown" ? event.key.toUpperCase() : null);
       const eventInit = {
         key: mapped,
         code: mapped,
@@ -1860,7 +1925,7 @@ function GamePlayer({
         <P14Overlays
           fpsEnabled={settings.fps}
           fpsCap={settings.fpsCap}
-          wasdEnabled={settings.wasdEnabled && !isDesktop}
+          wasdEnabled={settings.wasdEnabled}
           controlKeys={displayControlKeys}
           pressedKey={pressedKey}
           isDesktop={isDesktop}
