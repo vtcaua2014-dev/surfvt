@@ -71,6 +71,9 @@
         function forward(event) {
           if (event.__surfVT14Forwarded) return;
           var key = normalize(event.key);
+          if (!event.repeat && !event.ctrlKey && !event.altKey && !event.metaKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target && event.target.tagName || '')) {
+            announce('SURFVT14_KEY_VISUAL', { key: event.key, down: event.type === 'keydown' });
+          }
           if (key === 'q' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_TOGGLE'); event.preventDefault(); return; }
           if (key === 'r' && event.type === 'keydown' && !event.repeat) { announce('SURFVT14_TIMER_RESET'); event.preventDefault(); return; }
           var mapped = movement[key];
