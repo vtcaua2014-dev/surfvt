@@ -1084,12 +1084,12 @@ function ensureExternalTimerScripts(doc: Document): Promise<void> {
   return task;
 }
 
-function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[]) {
+function configureExternalTimers(doc: Document, enabled: boolean, settings: HubSettings, controlKeys: string[], isDesktop: boolean) {
   const gameWindow = doc.defaultView;
   if (!gameWindow || doc.URL === "about:blank") return;
   const hasController = Boolean(doc.querySelector('script[data-surfvt14-timer="controller"]'));
   const send = () => gameWindow.postMessage(
-    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: settings.wasdEnabled, controlKeys },
+    { type: "SURFVT14_TIMERS_CONFIG", enabled, mode: settings.timerStyle, startHotkey: settings.timerStartHotkey, pauseHotkey: settings.timerPauseHotkey, resetHotkey: settings.timerResetHotkey, autoMode: settings.timerAutoMode, wasdEnabled: settings.wasdEnabled && isDesktop, controlKeys },
     window.location.origin,
   );
   if (hasController) send();
@@ -1161,7 +1161,7 @@ function GamePlayer({
   useEffect(() => {
     if (!timerCompatible || !isVisible) {
       const doc = frameRef.current?.contentDocument;
-      if (doc) configureExternalTimers(doc, false, settings, controlKeys);
+      if (doc) configureExternalTimers(doc, false, settings, controlKeys, isDesktop);
       return;
     }
     const frame = frameRef.current;
@@ -1169,7 +1169,7 @@ function GamePlayer({
     const sync = () => {
       const doc = frame.contentDocument;
       if (!doc || doc.URL === "about:blank") return;
-      configureExternalTimers(doc, settings.timerEnabled, settings, controlKeys);
+      configureExternalTimers(doc, settings.timerEnabled, settings, controlKeys, isDesktop);
     };
     frame.addEventListener("load", sync);
     sync();
@@ -1793,7 +1793,7 @@ function GamePlayer({
                 onReady();
                 const gameDocument = frameRef.current?.contentDocument;
                 if (gameDocument && timerCompatible && isVisible && settings.timerEnabled)
-                  configureExternalTimers(gameDocument, settings.timerEnabled, settings, controlKeys);
+                  configureExternalTimers(gameDocument, settings.timerEnabled, settings, controlKeys, isDesktop);
                 window.setTimeout(() => {
                   frameRef.current?.contentWindow?.postMessage(
                     { type: "SURFVT14_HUB_SETTINGS", settings },
