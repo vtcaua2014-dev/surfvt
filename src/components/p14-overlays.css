@@ -81,31 +81,6 @@
 .p14-resize-ne { right: -5px; top: -5px; cursor: nesw-resize; }
 .p14-resize-sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
 .p14-resize-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
-.p14-timer-floating {
-  min-width: 190px;
-  border-radius: 18px;
-  padding: 11px 13px;
-  background: var(--p14-background);
-  color: var(--p14-color);
-  box-shadow: 0 5px 20px rgba(0,0,0,.28);
-}
-.p14-timer-heading { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; }
-.p14-clock-icon { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 6px; background: #258fca; font-size: 7px; }
-.p14-floating-time { margin: 4px 0 7px; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
-.p14-floating-actions { display: flex; justify-content: center; gap: 6px; }
-.p14-floating-actions button {
-  display: grid; width: 32px; height: 28px; place-items: center;
-  border: 0; border-radius: 6px; background: rgba(95,150,165,.45); color: inherit; cursor: pointer;
-}
-.p14-floating-actions svg { width: 16px; height: 16px; }
-.p14-timer-chrono, .p14-timer-livesplit { background: transparent; }
-.p14-chrono-cells { display: flex; gap: 5px; cursor: pointer; font-size: 25px; font-variant-numeric: tabular-nums; }
-.p14-chrono-cell { border-radius: 12px; padding: .38em .42em; background: var(--p14-background); color: var(--p14-color); }
-.p14-timer-livesplit .p14-livesplit { border-radius: 4px; padding: 4px 7px; background: var(--p14-background); color: var(--p14-color); cursor: pointer; }
-.p14-live-time { display: flex; align-items: baseline; gap: 2px; font: 700 24px/1.1 var(--p14-font),Arial,sans-serif; font-variant-numeric: tabular-nums; }
-.p14-live-time small { font-size: .62em; }
-.p14-splits { display: grid; gap: 2px; margin-top: 4px; font: 11px/1.2 var(--p14-font),Arial,sans-serif; }
-.p14-splits div { display: flex; justify-content: space-between; gap: 12px; }
 .p14-fps-widget { border-radius: 7px; padding: 5px 9px; background: var(--p14-background); color: var(--p14-color); }
 .p14-fps-readout { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .p14-keys-widget { background: transparent; }
