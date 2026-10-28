@@ -28,37 +28,7 @@ import newYork from "@/assets/new-york-lobby.jpg";
 import { Button } from "@/components/ui/button";
 import SurfVtBetaHub from "@/components/SurfVtBetaHub";
 import P14Overlays from "@/components/P14Overlays";
-
-type MapId =
-  | "moggers"
-  | "cairo"
-  | "london"
-  | "beijing"
-  | "cairo"
-  | "hongkong"
-  | "houston"
-  | "iceland"
-  | "neworleans"
-  | "paris"
-  | "saintpetersburg"
-  | "zurich"
-  | "subwaycrackers"
-  | "barcelona"
-  | "london"
-  | "mexico"
-  | "miami"
-  | "newyork"
-  | "sanfrancisco"
-  | "tokyo"
-  | "bangkok"
-  | "berlin"
-  | "buenosaires"
-  | "havana"
-  | "monaco"
-  | "moscow"
-  | "rio"
-  | "venice"
-  | "winterholiday";
+import { isIndependentGame, mapRouteSlug, type MapId } from "@/lib/game-types";
 type Theme = "netos" | "spider" | "aot" | "scott" | "jujutsu";
 type VeniceVariant = "moded" | "normal";
 
@@ -83,7 +53,7 @@ const maps: Array<{
   {
     id: "subwaycrackers",
     name: "Subway Crackers",
-    region: "JOGO · TEXTURAS E SKINS ORIGINAIS",
+    region: "JOGO INDEPENDENTE · NÃO É MAPA DE SUBWAY",
     path: "/maps/subwaycrackers/index.html",
     icon: "/maps/subwaycrackers/loading.png",
     timerCompatible: false,
@@ -1058,10 +1028,34 @@ const externalTimerFiles = [
 const externalTimerLoads = new WeakMap<Document, Promise<void>>();
 const externalTimerVersions = new WeakMap<Document, number>();
 
+function waitForIframeBody(doc: Document): Promise<void> {
+  if (doc.body) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let timeout = 0;
+    const finish = () => {
+      if (!doc.body) return;
+      window.clearTimeout(timeout);
+      doc.removeEventListener("DOMContentLoaded", finish);
+      resolve();
+    };
+    doc.addEventListener("DOMContentLoaded", finish, { once: true });
+    timeout = window.setTimeout(() => {
+      doc.removeEventListener("DOMContentLoaded", finish);
+      if (doc.body) resolve();
+      else reject(new Error("O DOM do iframe não criou document.body"));
+    }, 5000);
+    if (doc.readyState !== "loading") finish();
+  });
+}
+
 function ensureExternalTimerScripts(doc: Document): Promise<void> {
   const pending = externalTimerLoads.get(doc);
   if (pending) return pending;
   const task = (async () => {
+    // LiveSplit appends its markup to document.body. The iframe document can
+    // exist before its body has been parsed, so do not inject any timer script
+    // until DOMContentLoaded has made the target stable.
+    await waitForIframeBody(doc);
     const head = doc.head || doc.documentElement;
     if (!head) throw new Error("Iframe sem documentElement");
     const cover = doc.createElement("style");
@@ -1214,7 +1208,7 @@ function GamePlayer({
 }: GamePlayerProps) {
   // Venice Moded continua mostrando o cronômetro, mas recebe record=off
   // e permanece fora do fluxo de recordes.
-  const timerCompatible = map !== "moggers" && !downloadOnly;
+  const timerCompatible = !isIndependentGame(map) && !downloadOnly;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const soundcloudRef = useRef<HTMLIFrameElement>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
@@ -1670,7 +1664,7 @@ function GamePlayer({
   }, [settings.controls, settings.customControls, timerCompatible]);
 
   useEffect(() => {
-    if (map === "moggers" || !settings.autoBoostEnabled) return;
+    if (isIndependentGame(map) || !settings.autoBoostEnabled) return;
     const hotkey = settings.autoBoostHotkey.trim().toLowerCase();
     if (!hotkey) return;
     const matchesHotkey = (key: string, code: string) => {
@@ -2095,7 +2089,7 @@ function GamePlayer({
               ref={frameRef}
               key={map}
               src={`${mapPath}?map=${map}&variant=${map === "venice" ? veniceVariant : "default"}&record=${map === "venice" && veniceVariant === "normal" ? "on" : "off"}&hubSettings=${encodeURIComponent(launchSettings)}`}
-              title={`${map === "moggers" ? "Subway Moggers" : `${map} | Subway Surfers`}`}
+              title={`${isIndependentGame(map) ? (map === "moggers" ? "Subway Moggers" : "Subway Crackers") : `${map} | Subway Surfers`}`}
               className="game-frame"
               style={{
                 ...frameSize,
@@ -2191,7 +2185,9 @@ function GamePlayer({
           controlKeys={displayControlKeys}
           pressedKeys={[...pressedKeys, ...(pressedKey ? [pressedKey] : [])]}
           isDesktop={isDesktop}
-          autoBoostEnabled={settings.autoBoostEnabled && map !== "moggers"}
+          autoBoostEnabled={
+            settings.autoBoostEnabled && !isIndependentGame(map)
+          }
           onAutoBoost={triggerAutoBoost}
           onControlPress={(key, down) =>
             down ? pressControlKey(key) : releaseControlKey(key)
@@ -2202,7 +2198,15 @@ function GamePlayer({
   );
 }
 
-export default function MapHub() {
+export default function MapHub({
+  initialMap,
+  initialVeniceVariant = "normal",
+  autoLaunch = false,
+}: {
+  initialMap?: MapId;
+  initialVeniceVariant?: VeniceVariant;
+  autoLaunch?: boolean;
+} = {}) {
   const [profile, setProfile] = useState<UserProfile>(() =>
     readStoredProfile(),
   );
@@ -2210,7 +2214,7 @@ export default function MapHub() {
     () => readStoredProfile().favoriteTheme,
   );
   const [selectedMap, setSelectedMap] = useState<MapId>(
-    () => readStoredProfile().favoriteMap,
+    () => initialMap ?? readStoredProfile().favoriteMap,
   );
   const [mapSearch, setMapSearch] = useState("");
   const [interfaceMode, setInterfaceMode] = useState<"alpha" | "beta">(() => {
@@ -2223,8 +2227,9 @@ export default function MapHub() {
     }
   });
   const [betaFilter, setBetaFilter] = useState<BetaFilter>("all");
-  const [launchedMap, setLaunchedMap] = useState<MapId>("zurich");
-  const [veniceVariant, setVeniceVariant] = useState<VeniceVariant>("normal");
+  const [launchedMap, setLaunchedMap] = useState<MapId>(initialMap ?? "zurich");
+  const [veniceVariant, setVeniceVariant] =
+    useState<VeniceVariant>(initialVeniceVariant);
   const [veniceChoiceOpen, setVeniceChoiceOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingGame, setIsLoadingGame] = useState(false);
@@ -2454,15 +2459,35 @@ export default function MapHub() {
     setIsPlaying(true);
     setIsLoadingGame(true);
     sessionStartedAt.current = Date.now();
-    if (profile.provider !== "local")
+    const routePath = `/${mapRouteSlug(selectedMap)}${selectedMap === "venice" && variant === "moded" ? "?variant=moded" : ""}`;
+    if (window.location.pathname !== routePath) {
+      window.history.pushState({ surfvt14Map: selectedMap }, "", routePath);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  };
+
+  const autoLaunchHandled = useRef(false);
+  useEffect(() => {
+    if (!autoLaunch || !initialMap || autoLaunchHandled.current) return;
+    autoLaunchHandled.current = true;
+    launchRequested.current = true;
+    setSelectedMap(initialMap);
+    setLaunchedMap(initialMap);
+    setVeniceVariant(initialVeniceVariant);
+    setGameProgress(0);
+    setGameError(null);
+    setIsPlaying(true);
+    setIsLoadingGame(true);
+    sessionStartedAt.current = Date.now();
+    if (profile.provider !== "local") {
       setProfile((current) => ({
         ...current,
         gamesPlayed: current.gamesPlayed + 1,
-        favoriteTheme: theme,
-        favoriteMap: selectedMap,
+        favoriteMap: initialMap,
         lastPlayedAt: new Date().toISOString(),
       }));
-  };
+    }
+  }, [autoLaunch, initialMap, initialVeniceVariant, profile.provider]);
 
   const handleReady = useCallback(() => {
     setGameProgress(1);
@@ -2534,6 +2559,10 @@ export default function MapHub() {
     setIsLoadingGame(false);
     setGameError(null);
     setGameProgress(0);
+    if (window.location.pathname !== "/") {
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
   };
 
   const progressPercent = Math.round(gameProgress * 100);
@@ -2806,7 +2835,7 @@ export default function MapHub() {
                       : `${maps.length} ${copy.mapsAvailable}`}
                   </span>
                 </div>
-                {selected.id === "moggers" && (
+                {isIndependentGame(selected.id) && (
                   <p className="standalone-game-warning" role="note">
                     Este é um jogo independente, não um mapa de Subway Surfers.
                     Ele usa os controles, contador de FPS e SoundCloud do hub,

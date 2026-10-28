@@ -77,3 +77,12 @@ SHA do commit e estado do deploy são informados no relatório de entrega após 
 
 
 Teste complementar de Bangkok: partida iniciada com toque em http://127.0.0.2:8081, hostname fora da lista antiga. O defeito foi também reproduzido no domínio público antes dessa correção; a comparação byte a byte do framework provou que não era um deploy com outro arquivo.
+
+### Backup de save e URLs por jogo
+
+- O arquivo enviado `P14_backup_2026-10-28T00-16-11-036Z.bin` é JSON P14 Backup v2, não um binário executável. A origem inclui um IndexedDB `/idbfs` versão 21 com 12 entradas, entre elas PlayerPrefs e saves local/cloud da build Iceland. O backup é importado em `FILE_DATA`, reconstruindo valores Date e Uint8Array.
+- Na primeira visita aos mapas Subway Surfers, o bootstrap tenta importar esse backup antes de iniciar Unity. Se o arquivo estiver indisponível ou inválido, carrega `unlock-all.js` e depois `infinite-save.js`. Se já houver save local, preserva-o; arquivos auxiliares e PlayerPrefs existentes também não são substituídos durante a mesclagem. Um marcador no localStorage impede reaplicar o backup em cada mapa.
+- Os jogos agora têm URLs diretas, como `/berlin`, `/winter-holiday`, `/subway-crackers` e `/moggers`. Recarregar ou compartilhar a URL conserva o jogo selecionado; fechar o jogo volta a `/`.
+- Subway Crackers e Subway Moggers são classificados como jogos independentes, sem rótulo de mapa Subway Surfers e sem timers. O backup de Subway Surfers não é carregado no Subway Crackers.
+- `tests/save-bootstrap.py` confirmou a importação das 12 entradas com banco versão 21, a preservação de save existente e o fallback para os dois scripts na ordem prevista. O teste visual do hub no Chromium selecionou Berlin, mudou a rota para `/berlin` e abriu um único iframe.
+- A revisão do carregamento encontrou uma corrida no LiveSplit: o hub podia injetar o script antes de o documento do iframe criar `document.body`, causando `insertAdjacentHTML` em `null`. Agora a injeção aguarda o DOM do iframe. A abertura de Berlin ficou sem erro de JavaScript, com o controlador e os três elementos de timer presentes. `game-routes.py` validou os 27 endereços diretos no Chromium.

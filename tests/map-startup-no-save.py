@@ -51,6 +51,12 @@ async def main():
                 }
                 """
             )
+            # Exercise the fallback path and prove that stalled save APIs do
+            # not keep the Unity game behind its loader.
+            await page.route(
+                "**/save-backup/**",
+                lambda route: route.fulfill(status=404, body="backup unavailable"),
+            )
 
             started = monotonic()
             await page.goto(f"{base_url}/maps/cairo/index.html", wait_until="domcontentloaded")

@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isIndependentGame } from "@/lib/game-types";
 
 type BetaMap = {
   id: string;
@@ -93,14 +94,18 @@ export default function SurfVtBetaHub({
   const visibleMaps = searchResults.filter(
     (map) =>
       filter === "all" ||
-      (filter === "other" ? map.id === "moggers" : map.id !== "moggers"),
+      (filter === "other"
+        ? isIndependentGame(map.id)
+        : !isIndependentGame(map.id)),
   );
 
   const pickRandomMap = () => {
     const matchingCategory = maps.filter(
       (map) =>
         filter === "all" ||
-        (filter === "other" ? map.id === "moggers" : map.id !== "moggers"),
+        (filter === "other"
+          ? isIndependentGame(map.id)
+          : !isIndependentGame(map.id)),
     );
     const pool = visibleMaps.length ? visibleMaps : matchingCategory;
     const nextMap = pool[Math.floor(Math.random() * pool.length)];
@@ -299,7 +304,7 @@ export default function SurfVtBetaHub({
                 </button>
                 <div className="beta-map-footer">
                   <span className="beta-map-status">
-                    {map.id === "moggers"
+                    {isIndependentGame(map.id)
                       ? labels.other
                       : map.downloadOnly
                         ? labels.download
@@ -336,7 +341,7 @@ export default function SurfVtBetaHub({
           </Button>
         </div>
 
-        {selected.id === "moggers" && (
+        {isIndependentGame(selected.id) && (
           <p className="beta-independent-note" role="note">
             {labels.warning}
           </p>
