@@ -295,33 +295,12 @@
       }
 
       function finishStartup() {
-        if (store('get', saveReloadKey) === '1') {
-          store('remove', saveReloadKey);
-          revealGame();
-          return;
-        }
-        var attempts = 0;
-        function trySave() {
-          attempts += 1;
-          withTimeout(prepareSave(), 4000, [{ ready: false }]).then(function (results) {
-            var unlockResult = results[0];
-            if (unlockResult && unlockResult.ready && unlockResult.hashes) {
-              // O Unity já está inicializado; o save foi gravado no IndexedDB e será
-              // usado na próxima inicialização. Recarregar o iframe aqui fazia a
-              // instalação voltar ao loading e podia criar um loop em navegadores
-              // que particionam sessionStorage dentro de iframes.
-              revealGame();
-              return;
-            }
-            if (attempts < 12) {
-              document.getElementById('mode').textContent = modeName + ' · preparando save completo';
-              window.setTimeout(trySave, 250);
-            } else {
-              revealGame();
-            }
-          }).catch(revealGame);
-        }
-        trySave();
+        // IndexedDB/unlock initialization can be blocked or slow in Brave and
+        // other browsers. Unity is already initialized here; never hold the
+        // original game UI behind save retries. revealGame schedules saves in
+        // the background, and the periodic save guard keeps retrying safely.
+        if (store('get', saveReloadKey) === '1') store('remove', saveReloadKey);
+        revealGame();
       }
 
       (function installHubRuntimeBridge() {

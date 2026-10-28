@@ -42,6 +42,13 @@ Revisados os commits 111978b6, de9e71ec, 4a323f0c, 63fac860, accf301a e 861df86d
 
 - No teste móvel de Bangkok, o diálogo original ignorou toques, mas respondeu a cliques de mouse nas mesmas coordenadas. `touch-input.js`, exclusivo dessa build, converte um gesto de um dedo em eventos de mouse e suprime a duplicação de eventos de compatibilidade. As outras builds mantêm seus eventos nativos de toque.
 
+### Mapas que paravam perto de 94% no Brave
+
+- O caminho comum de 22 builds esperava o sistema de save e unlock concluir até 12 tentativas de quatro segundos antes de revelar o jogo. Essas operações dependem de IndexedDB e podem ficar bloqueadas ou sem um save inicial no Brave.
+- Esse trabalho não é requisito para inicializar o Unity. A espera foi removida; `revealGame()` exibe a interface assim que o runtime está pronto, e a rotina periódica continua tentando gravar os saves em segundo plano. Não apagamos nem substituímos recordes.
+- O teste `map-startup-no-save.py` deixa `applyUnlockAll` e `applyInfiniteSave` pendentes e confirma que Cairo ainda envia `SURFVT14_GAME_READY`, cria o canvas e revela a interface. Passou em 11 segundos, contra a espera potencial de até cerca de 48 segundos do fluxo antigo.
+- A barra do hub também pode mostrar progresso estimado enquanto aguarda prontidão; esse número não representa necessariamente bytes transferidos. No teste publicado de Cairo, o progresso interno avançou de 0% a 100%, e a tela original apareceu. A correção também foi aplicada ao Zurich, cuja build usava o mesmo bloqueio.
+
 ### Por que deploys anteriores podiam não resolver
 
 O service worker `v20` guardava os mapas por cache-first e eliminava toda a query string da chave, incluindo versões dos assets. Assim, usuários antigos podiam continuar executando HTML, SDK e manifestos anteriores aos commits citados. O cache foi migrado para `v21`; HTML/JS/JSON usam rede primeiro, com fallback offline. Parâmetros de versão de assets são preservados. Preferências e saves não são apagados.

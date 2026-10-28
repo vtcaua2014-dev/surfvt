@@ -11,7 +11,10 @@ BASE_URL=http://127.0.0.1:3000 EVIDENCE_DIR=/tmp/surfvt-evidence python tests/br
 BASE_URL=http://127.0.0.1:3000 python tests/cache-migration.py
 MAP_BASE_URL=http://127.0.0.1:8081 python tests/clock-boundaries.py
 MAP_BASE_URL=http://127.0.0.1:8081 EVIDENCE_DIR=/tmp/surfvt-evidence python tests/map-startup.py
+python tests/map-startup-no-save.py
 ```
+
+`map-startup-no-save.py` starts its own static server and simulates IndexedDB save calls that never resolve. It checks that Unity still reveals its original game UI and sends the ready message.
 
 Crie previamente a pasta de evidências. Os testes de mapas usam contextos descartáveis, sem saves pessoais, e passam pelos diálogos originais antes de iniciar uma partida. Não edite código enquanto o teste usa o servidor Vite: HMR pode descartar o iframe e invalidar a execução. O teste móvel usa emulação Chromium e não substitui um iPhone/Safari real.
 
