@@ -1469,6 +1469,13 @@
       }
       const isDuplicateStart = eventNow - lastGameplayStartSignalAt < GAMEPLAY_START_DUPLICATE_MS;
       lastGameplayStartSignalAt = eventNow;
+      // Coin revives do not necessarily call rewardedBreak. If gameplay resumes
+      // shortly after a death, continue the paused run instead of resetting it.
+      if (timerState === 'paused' && pausedReason === 'death' && deathPausedAt && eventNow - deathPausedAt <= REVIVE_WINDOW_MS) {
+        pendingRevive = false;
+        resumeTimer('auto');
+        return;
+      }
       // A new start signal after the duplicate window is a new run, even if
       // the previous timer was still running.
       if (timerState === 'running' && !isDuplicateStart) {
@@ -1600,6 +1607,13 @@
     }
 
     if (popup.style.display === 'block') return;
+    // With sound effects muted, some Unity builds stop emitting audio callbacks.
+    // A real run-start input is the deterministic fallback when no run is active.
+    if (autoModeEnabled && timerState === 'stopped' &&
+        (event.code === 'Space' || event.code === 'Enter' || event.code === 'ArrowUp' || event.code === 'KeyW')) {
+      startNewRun('auto');
+      return;
+    }
     if (timerState !== 'paused' || pausedReason !== 'death') return;
 
     // Never use lateral movement as revive.

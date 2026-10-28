@@ -231,7 +231,7 @@ const maps: Array<{
     name: "Subway Moggers",
     region: "JOGO INDEPENDENTE · NÃO É MAPA DE SUBWAY",
     path: "/moggers/index.html",
-    icon: "/moggers/imagemog.png",
+    icon: "/map-icons/moggers.png",
     timerCompatible: false,
   },
 ];
@@ -1683,6 +1683,11 @@ function GamePlayer({
       triggerAutoBoost();
     };
     const handleGameKey = (event: MessageEvent) => {
+      if (
+        event.source !== frameRef.current?.contentWindow ||
+        event.origin !== window.location.origin
+      )
+        return;
       const data = event.data || {};
       if (data.type !== "SURFVT14_GAME_KEY" || data.repeat) return;
       if (!matchesHotkey(String(data.key || ""), String(data.code || "")))

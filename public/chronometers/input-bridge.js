@@ -82,6 +82,14 @@
       code: event.code,
       down: event.type === "keydown",
     });
+    if (event.type === "keydown") {
+      post({
+        type: "SURFVT14_GAME_KEY",
+        key: event.key,
+        code: event.code,
+        repeat: event.repeat,
+      });
+    }
     if (
       event.type === "keydown" &&
       window.__surfvt14TimerController?.handleKey(event)

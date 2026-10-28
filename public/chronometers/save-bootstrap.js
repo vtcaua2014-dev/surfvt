@@ -275,6 +275,60 @@
     });
   }
 
+  function activateBackupSaveGuard() {
+    return openDatabase().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx;
+        try {
+          tx = db.transaction([STORE_NAME], "readonly");
+        } catch (error) {
+          db.close();
+          reject(error);
+          return;
+        }
+        var store = tx.objectStore(STORE_NAME);
+        var keysRequest = store.getAllKeys();
+        var recordsRequest = store.getAll();
+        var keys = [];
+        var records = [];
+        keysRequest.onsuccess = function () { keys = keysRequest.result; };
+        recordsRequest.onsuccess = function () { records = recordsRequest.result; };
+        tx.oncomplete = function () {
+          db.close();
+          var templates = {};
+          var fallback = null;
+          keys.forEach(function (key, index) {
+            key = String(key);
+            if (!/^\/idbfs\/[^/]+\/Save\/(?:local|cloud|local_old|cloud_old)$/i.test(key)) return;
+            var contents = records[index] && records[index].contents;
+            if (!(contents instanceof Uint8Array) || !contents.length) return;
+            templates[key] = new Uint8Array(contents);
+            if (/\/Save\/cloud$/i.test(key)) fallback = templates[key];
+            else if (!fallback) fallback = templates[key];
+          });
+          if (!Object.keys(templates).length || !fallback) {
+            reject(new Error("O backup não contém saves aplicáveis ao Unity"));
+            return;
+          }
+          window.__SURFVT14_SAVE_TEMPLATES = templates;
+          window.__SURFVT14_UNLOCK_BYTES = new Uint8Array(fallback);
+          var scriptUrl = new URL("infinite-save.js", new URL("./", location.href)).href;
+          loadScript(scriptUrl).then(function () {
+            if (typeof window.applyInfiniteSave !== "function") {
+              reject(new Error("A proteção de save não inicializou"));
+              return;
+            }
+            window.applyInfiniteSave().then(resolve, reject);
+          }, reject);
+        };
+        tx.onerror = function () {
+          db.close();
+          reject(tx.error || new Error("Falha ao ler os saves importados"));
+        };
+      });
+    });
+  }
+
   function runFallback() {
     var base = new URL("./", location.href);
     return loadScript(new URL("unlock-all.js", base).href)
@@ -282,12 +336,9 @@
         return loadScript(new URL("infinite-save.js", base).href);
       })
       .then(function () {
-        return (
-          window.__SURFVT14_SAVE_READY_PROMISE || {
-            ready: false,
-            reason: "save scripts loaded",
-          }
-        );
+        return typeof window.applyInfiniteSave === "function"
+          ? window.applyInfiniteSave()
+          : { ready: false, reason: "save scripts loaded" };
       });
   }
 
@@ -295,7 +346,9 @@
   window.__SURFVT14_SAVE_READY_PROMISE = importBackup()
     .then(function (result) {
       window.__SURFVT14_SAVE_SOURCE = "backup";
-      return result;
+      return activateBackupSaveGuard().then(function (guard) {
+        return Object.assign({}, result, { infiniteSave: guard });
+      });
     })
     .catch(function (backupError) {
       window.__SURFVT14_SAVE_SOURCE = "unlock-all+infinite-save";

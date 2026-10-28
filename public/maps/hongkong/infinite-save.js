@@ -20,11 +20,17 @@
   function isSaveStore(store) {
     try { return store && store.name === STORE; } catch (e) { return false; }
   }
-  function forcedValue(previous) {
+  function templateFor(key) {
+    var templates = window.__SURFVT14_SAVE_TEMPLATES;
+    return (templates && templates[key]) || bytes();
+  }
+  function forcedValue(previous, key) {
+    var payload = templateFor(key);
+    if (!payload || !payload.length) return previous;
     var out = previous && typeof previous === "object" ? Object.assign({}, previous) : {};
     out.timestamp = new Date();
     out.mode = 33206;
-    out.contents = new Uint8Array(bytes() || []);
+    out.contents = new Uint8Array(payload);
     return out;
   }
   function installGuard() {
@@ -35,7 +41,7 @@
       if (typeof original !== "function") return;
       proto[method] = function (value, key) {
         try {
-          if (isSaveStore(this) && isSaveKey(key)) value = forcedValue(value);
+          if (isSaveStore(this) && isSaveKey(key)) value = forcedValue(value, key) || value;
         } catch (e) {}
         return original.call(this, value, key);
       };
@@ -82,7 +88,10 @@
       var tx;
       try { tx = db.transaction([STORE], "readwrite"); } catch (e) { reject(e); return; }
       var store = tx.objectStore(STORE);
-      keys.forEach(function (key) { store.put(forcedValue(null), key); });
+      keys.forEach(function (key) {
+        var value = forcedValue(null, key);
+        if (value) store.put(value, key);
+      });
       tx.oncomplete = function () { resolve(keys); };
       tx.onerror = function () { reject(tx.error || new Error("Falha ao gravar saves")); };
       tx.onabort = function () { reject(tx.error || new Error("Transação de save abortada")); };
@@ -114,7 +123,7 @@
     if (runningPromise) return runningPromise;
     runningPromise = (async function () {
       // Always run unlock first so the force-save uses the same current payload.
-      if (typeof window.applyUnlockAll === "function") {
+      if (window.__SURFVT14_SAVE_SOURCE !== "backup" && typeof window.applyUnlockAll === "function") {
         try { await window.applyUnlockAll(); } catch (e) { window.__SURFVT14_LAST_UNLOCK_ERROR = String(e); }
       }
       var result = { ready: false, reason: "not-ready" };

@@ -34,7 +34,8 @@ async def main():
             )
             await page.goto(f"{base_url}/maps/cairo/index.html", wait_until="domcontentloaded")
             await page.wait_for_function(
-                "window.__SURFVT14_SAVE_SOURCE === 'backup'", timeout=15_000
+                "window.__SURFVT14_SAVE_SOURCE === 'backup' && window.__SURFVT14_INFINITE_SAVE_GUARD === true",
+                timeout=15_000,
             )
             imported = await page.evaluate(
                 """async () => {
@@ -54,6 +55,11 @@ async def main():
                 }"""
             )
             assert imported == {"version": 21, "count": 12}, imported
+            guard = await page.evaluate(
+                "({templates: Object.keys(window.__SURFVT14_SAVE_TEMPLATES || {}), unlockAll: typeof window.applyUnlockAll})"
+            )
+            assert len(guard["templates"]) == 4, guard
+            assert guard["unlockAll"] == "undefined", guard
             await clean.close()
 
             existing = await browser.new_context()
@@ -89,7 +95,8 @@ async def main():
                 f"{base_url}/maps/cairo/test.html?import", wait_until="domcontentloaded"
             )
             await existing_page.wait_for_function(
-                "window.__SURFVT14_SAVE_SOURCE === 'backup'", timeout=10_000
+                "window.__SURFVT14_SAVE_SOURCE === 'backup' && window.__SURFVT14_INFINITE_SAVE_GUARD === true",
+                timeout=10_000,
             )
             kept_save = await existing_page.evaluate(
                 """async () => {
@@ -155,7 +162,8 @@ async def main():
                 f"{base_url}/maps/cairo/partial.html?import", wait_until="domcontentloaded"
             )
             await partial_page.wait_for_function(
-                "window.__SURFVT14_SAVE_SOURCE === 'backup'", timeout=10_000
+                "window.__SURFVT14_SAVE_SOURCE === 'backup' && window.__SURFVT14_INFINITE_SAVE_GUARD === true",
+                timeout=10_000,
             )
             merged = await partial_page.evaluate(
                 """async () => {
@@ -213,6 +221,7 @@ async def main():
             )
             assert calls == ["unlock", "infinite"], calls
             print("PASS backup imports 12 IDBFS records at database version 21")
+            print("PASS backup activates per-save infinite persistence without loading unlock-all")
             print("PASS an existing player save is preserved")
             print("PASS existing PlayerPrefs are preserved while missing backup files are merged")
             print("PASS missing backup loads unlock-all and infinite-save in order")
