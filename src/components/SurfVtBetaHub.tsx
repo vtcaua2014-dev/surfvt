@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isIndependentGame } from "@/lib/game-types";
+import MoggersArtwork from "@/components/MoggersArtwork";
 
 type BetaMap = {
   id: string;
@@ -167,7 +168,9 @@ export default function SurfVtBetaHub({
         <aside className="beta-feature-column">
           <article className="beta-featured-build">
             <div className="beta-featured-art">
-              {selected.icon ? (
+              {selected.id === "moggers" ? (
+                <MoggersArtwork className="moggers-artwork-beta-feature" />
+              ) : selected.icon ? (
                 <img
                   src={selected.icon}
                   alt=""
@@ -286,7 +289,9 @@ export default function SurfVtBetaHub({
                   onClick={() => onSelectMap(map.id)}
                 >
                   <span className="beta-map-art">
-                    {map.icon ? (
+                    {map.id === "moggers" ? (
+                      <MoggersArtwork className="moggers-artwork-beta-icon" />
+                    ) : map.icon ? (
                       <img
                         src={map.icon}
                         alt=""

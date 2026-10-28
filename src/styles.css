@@ -4295,3 +4295,47 @@ button {
 }
 @media (max-width: 700px) {
 }
+
+/* Subway Moggers uses a true split preview so both edition covers are visible. */
+.moggers-artwork {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  isolation: isolate;
+}
+.moggers-artwork > img {
+  position: absolute;
+  inset-block: 0;
+  width: 50%;
+  height: 100%;
+  object-fit: cover;
+}
+.moggers-artwork > img:first-child {
+  left: 0;
+  object-position: center;
+}
+.moggers-artwork > img:last-child {
+  right: 0;
+  object-position: center;
+}
+.moggers-artwork-feature {
+  width: 100%;
+  height: clamp(13rem, 28vw, 20rem);
+  opacity: 0.9;
+  filter: saturate(1.08);
+}
+.moggers-artwork-beta-feature {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.9;
+}
+.moggers-artwork-beta-icon {
+  width: 100%;
+  height: 100%;
+}
+.moggers-artwork.map-button-icon {
+  box-shadow: 0 0 12px rgba(114, 137, 218, 0.55);
+}

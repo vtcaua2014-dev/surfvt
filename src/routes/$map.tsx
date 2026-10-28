@@ -5,13 +5,16 @@ import { mapIdFromRouteSlug } from "@/lib/game-types";
 export const Route = createFileRoute("/$map")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(search["variant"] === "moded" ? { variant: "moded" as const } : {}),
+    ...(search["edition"] === "ultimate"
+      ? { edition: "ultimate" as const }
+      : {}),
   }),
   component: MapRoute,
 });
 
 function MapRoute() {
   const { map } = Route.useParams();
-  const { variant } = Route.useSearch();
+  const { variant, edition } = Route.useSearch();
   const mapId = mapIdFromRouteSlug(map);
 
   if (!mapId) {
@@ -38,6 +41,7 @@ function MapRoute() {
       key={mapId}
       initialMap={mapId}
       initialVeniceVariant={variant === "moded" ? "moded" : "normal"}
+      initialMoggersEdition={edition === "ultimate" ? "ultimate" : "lite"}
       autoLaunch
     />
   );

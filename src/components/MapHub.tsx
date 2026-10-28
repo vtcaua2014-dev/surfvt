@@ -28,9 +28,11 @@ import newYork from "@/assets/new-york-lobby.jpg";
 import { Button } from "@/components/ui/button";
 import SurfVtBetaHub from "@/components/SurfVtBetaHub";
 import P14Overlays from "@/components/P14Overlays";
+import MoggersArtwork from "@/components/MoggersArtwork";
 import { isIndependentGame, mapRouteSlug, type MapId } from "@/lib/game-types";
 type Theme = "netos" | "spider" | "aot" | "scott" | "jujutsu";
 type VeniceVariant = "moded" | "normal";
+type MoggersEdition = "lite" | "ultimate";
 
 const maps: Array<{
   id: MapId;
@@ -368,7 +370,7 @@ const betaUiLabels: Record<
     random: "SURPREENDA-ME",
     download: "DOWNLOAD",
     warning:
-      "Jogo independente; não é um mapa de Subway Surfers. Cronômetros não são compatíveis.",
+      "Jogo independente; não é um mapa de Subway Surfers. Cronômetros são compatíveis com Crackers, não com Moggers.",
   },
   en: {
     all: "ALL",
@@ -379,7 +381,7 @@ const betaUiLabels: Record<
     random: "SURPRISE ME",
     download: "DOWNLOAD",
     warning:
-      "Independent game, not a Subway Surfers map. Timers are not supported.",
+      "Independent game, not a Subway Surfers map. Timers are supported for Crackers, not Moggers.",
   },
   de: {
     all: "ALLE",
@@ -390,7 +392,7 @@ const betaUiLabels: Record<
     random: "ZUFALLSAUSWAHL",
     download: "HERUNTERLADEN",
     warning:
-      "Eigenständiges Spiel, keine Subway-Surfers-Karte. Timer werden nicht unterstützt.",
+      "Eigenständiges Spiel, keine Subway-Surfers-Karte. Timer funktionieren mit Crackers, nicht mit Moggers.",
   },
   fr: {
     all: "TOUS",
@@ -401,7 +403,7 @@ const betaUiLabels: Record<
     random: "SURPRENEZ-MOI",
     download: "TÉLÉCHARGER",
     warning:
-      "Jeu indépendant, pas une carte Subway Surfers. Les chronomètres ne sont pas compatibles.",
+      "Jeu indépendant, pas une carte Subway Surfers. Les chronomètres fonctionnent avec Crackers, pas Moggers.",
   },
   zh: {
     all: "全部",
@@ -411,7 +413,8 @@ const betaUiLabels: Record<
     headlineB: "下一条赛道。",
     random: "随机选择",
     download: "下载",
-    warning: "这是独立游戏，不是 Subway Surfers 地图；不支持计时器。",
+    warning:
+      "这是独立游戏，不是 Subway Surfers 地图。计时器支持 Crackers，不支持 Moggers。",
   },
 };
 type Resolution =
@@ -1208,7 +1211,8 @@ function GamePlayer({
 }: GamePlayerProps) {
   // Venice Moded continua mostrando o cronômetro, mas recebe record=off
   // e permanece fora do fluxo de recordes.
-  const timerCompatible = !isIndependentGame(map) && !downloadOnly;
+  const timerCompatible =
+    !downloadOnly && (!isIndependentGame(map) || map === "subwaycrackers");
   const frameRef = useRef<HTMLIFrameElement>(null);
   const soundcloudRef = useRef<HTMLIFrameElement>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
@@ -2206,10 +2210,12 @@ function GamePlayer({
 export default function MapHub({
   initialMap,
   initialVeniceVariant = "normal",
+  initialMoggersEdition = "lite",
   autoLaunch = false,
 }: {
   initialMap?: MapId;
   initialVeniceVariant?: VeniceVariant;
+  initialMoggersEdition?: MoggersEdition;
   autoLaunch?: boolean;
 } = {}) {
   const [profile, setProfile] = useState<UserProfile>(() =>
@@ -2236,6 +2242,10 @@ export default function MapHub({
   const [veniceVariant, setVeniceVariant] =
     useState<VeniceVariant>(initialVeniceVariant);
   const [veniceChoiceOpen, setVeniceChoiceOpen] = useState(false);
+  const [moggersChoiceOpen, setMoggersChoiceOpen] = useState(false);
+  const [moggersEdition, setMoggersEdition] = useState<MoggersEdition>(
+    initialMoggersEdition,
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingGame, setIsLoadingGame] = useState(false);
   const [gameError, setGameError] = useState<string | null>(null);
@@ -2449,14 +2459,23 @@ export default function MapHub({
     value: HubSettings[K],
   ) => setSettings((current) => ({ ...current, [key]: value }));
 
-  const handlePlay = (variant: VeniceVariant = "normal") => {
+  const handlePlay = (
+    variant: VeniceVariant = "normal",
+    edition?: MoggersEdition,
+  ) => {
+    if (selectedMap === "moggers" && !edition) {
+      setMoggersChoiceOpen(true);
+      return;
+    }
     if (selectedMap === "venice" && !veniceChoiceOpen && variant === "normal") {
       setVeniceChoiceOpen(true);
       return;
     }
     if (launchRequested.current || isLoadingGame || isPlaying) return;
     setVeniceChoiceOpen(false);
+    setMoggersChoiceOpen(false);
     setVeniceVariant(selectedMap === "venice" ? variant : "normal");
+    if (selectedMap === "moggers" && edition) setMoggersEdition(edition);
     launchRequested.current = true;
     setLaunchedMap(selectedMap);
     setGameProgress(0);
@@ -2464,7 +2483,15 @@ export default function MapHub({
     setIsPlaying(true);
     setIsLoadingGame(true);
     sessionStartedAt.current = Date.now();
-    const routePath = `/${mapRouteSlug(selectedMap)}${selectedMap === "venice" && variant === "moded" ? "?variant=moded" : ""}`;
+    const routeQuery = [
+      selectedMap === "venice" && variant === "moded" ? "variant=moded" : "",
+      selectedMap === "moggers" && edition === "ultimate"
+        ? "edition=ultimate"
+        : "",
+    ]
+      .filter(Boolean)
+      .join("&");
+    const routePath = `/${mapRouteSlug(selectedMap)}${routeQuery ? `?${routeQuery}` : ""}`;
     if (window.location.pathname !== routePath) {
       window.history.pushState({ surfvt14Map: selectedMap }, "", routePath);
       window.dispatchEvent(new PopStateEvent("popstate"));
@@ -2479,6 +2506,7 @@ export default function MapHub({
     setSelectedMap(initialMap);
     setLaunchedMap(initialMap);
     setVeniceVariant(initialVeniceVariant);
+    setMoggersEdition(initialMoggersEdition);
     setGameProgress(0);
     setGameError(null);
     setIsPlaying(true);
@@ -2492,7 +2520,13 @@ export default function MapHub({
         lastPlayedAt: new Date().toISOString(),
       }));
     }
-  }, [autoLaunch, initialMap, initialVeniceVariant, profile.provider]);
+  }, [
+    autoLaunch,
+    initialMap,
+    initialVeniceVariant,
+    initialMoggersEdition,
+    profile.provider,
+  ]);
 
   const handleReady = useCallback(() => {
     setGameProgress(1);
@@ -2605,8 +2639,10 @@ export default function MapHub({
           mapPath={
             launchedMap === "venice" && veniceVariant === "normal"
               ? "/maps/venice-normal/index.html"
-              : (maps.find((map) => map.id === launchedMap)?.path ??
-                maps[0]!.path)
+              : launchedMap === "moggers" && moggersEdition === "ultimate"
+                ? "/moggers/ultimate.html"
+                : (maps.find((map) => map.id === launchedMap)?.path ??
+                  maps[0]!.path)
           }
           mapDownloadUrl={
             maps.find((map) => map.id === launchedMap)?.downloadUrl
@@ -2783,13 +2819,17 @@ export default function MapHub({
                 </p>
                 <p className="home-description">{copy.homeDescription}</p>
                 <figure className="selected-route-card">
-                  <img
-                    src={selected.icon ?? "/discord-server-icon.png"}
-                    alt=""
-                    width={640}
-                    height={480}
-                    decoding="async"
-                  />
+                  {selected.id === "moggers" ? (
+                    <MoggersArtwork className="moggers-artwork-feature" />
+                  ) : (
+                    <img
+                      src={selected.icon ?? "/discord-server-icon.png"}
+                      alt=""
+                      width={640}
+                      height={480}
+                      decoding="async"
+                    />
+                  )}
                   <figcaption>
                     <span className="route-kicker">{copy.featuredLabel}</span>
                     <strong>{selected.name}</strong>
@@ -2843,8 +2883,10 @@ export default function MapHub({
                 {isIndependentGame(selected.id) && (
                   <p className="standalone-game-warning" role="note">
                     Este é um jogo independente, não um mapa de Subway Surfers.
-                    Ele usa os controles, contador de FPS e SoundCloud do hub,
-                    mas não é compatível com cronômetros.
+                    Ele usa os controles, contador de FPS e SoundCloud do hub.
+                    {selected.id === "subwaycrackers"
+                      ? " Os cronômetros do hub são compatíveis com este jogo."
+                      : " Os cronômetros do hub não são compatíveis com Moggers."}
                   </p>
                 )}
 
@@ -2886,7 +2928,9 @@ export default function MapHub({
                         data-map-id={map.id}
                         onClick={() => setSelectedMap(map.id)}
                       >
-                        {map.icon ? (
+                        {map.id === "moggers" ? (
+                          <MoggersArtwork className="map-button-icon" />
+                        ) : map.icon ? (
                           <img
                             className="map-button-icon"
                             src={map.icon}
@@ -2995,6 +3039,77 @@ export default function MapHub({
             <a href="#collection">{copy.pickMap}</a>
           </footer>
         </div>
+
+        {moggersChoiceOpen && !isPlaying && (
+          <div
+            className="venice-choice-backdrop"
+            role="presentation"
+            onClick={() => setMoggersChoiceOpen(false)}
+          >
+            <section
+              className="venice-choice-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="moggers-choice-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="venice-choice-header">
+                <div>
+                  <span className="ui-font text-xs text-secondary">
+                    SUBWAY MOGGERS // EDIÇÕES
+                  </span>
+                  <h2
+                    id="moggers-choice-title"
+                    className="display-font mt-1 text-2xl"
+                  >
+                    Escolha a versão
+                  </h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMoggersChoiceOpen(false)}
+                  aria-label="Fechar"
+                >
+                  <X />
+                </Button>
+              </div>
+              <div className="venice-choice-grid">
+                <button
+                  type="button"
+                  className="venice-choice-card"
+                  onClick={() => handlePlay("normal", "lite")}
+                >
+                  <span className="venice-choice-kicker">BUILD LEVE</span>
+                  <strong>Subway Moggers Lite</strong>
+                  <small>
+                    Runner 3D feito com Three.js. Tem corrida, moedas, recorde,
+                    skins, revive, obstáculos e controles de toque.
+                  </small>
+                  <span className="venice-choice-action">JOGAR LITE</span>
+                </button>
+                <button
+                  type="button"
+                  className="venice-choice-card"
+                  onClick={() => handlePlay("normal", "ultimate")}
+                >
+                  <span className="venice-choice-kicker">BUILD COMPLETA</span>
+                  <strong>Subway Moggers Ultimate</strong>
+                  <small>
+                    Motor próprio em WebAssembly/WebGL, loja de skins, missões,
+                    escolha de zonas, hoverboards, poderes e ajustes de
+                    qualidade, FPS e áudio.
+                  </small>
+                  <span className="venice-choice-action">JOGAR ULTIMATE</span>
+                </button>
+              </div>
+              <p className="venice-choice-note">
+                As edições salvam o progresso separadamente e usam builds
+                diferentes.
+              </p>
+            </section>
+          </div>
+        )}
 
         {veniceChoiceOpen && !isPlaying && (
           <div
